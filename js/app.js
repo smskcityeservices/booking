@@ -996,10 +996,6 @@ function switchPreviewMode(mode) {
 /* ==========================================================================
  * Hybrid Authentication & User Profile Management
  * ======================================================================== */
-function openLoginModal() {
-  openModal('loginModal');
-}
-
 function openProfileModal() {
   if (!STATE.user || !STATE.user.authenticated) {
     openLoginModal();
