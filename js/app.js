@@ -1333,43 +1333,46 @@ function submitBookingForm(e) {
   setLoading(true, 'กำลังบันทึกการจองห้องประชุม...');
 
   callGas('createBooking', STATE.token, payload)
-    .then(function(res) {
-      if (!res.success && res.code === 'CONFLICT') {
-        performLiveAvailabilityCheck();
+      .then(function(res) {
+        if (!res.success && res.code === 'CONFLICT') {
+          performLiveAvailabilityCheck();
+          Swal.fire({
+            icon: 'warning',
+            title: 'เวลาทับซ้อนกัน',
+            text: res.message,
+            confirmButtonColor: '#0f4c81',
+            confirmButtonText: 'เลือกช่วงเวลาใหม่'
+          });
+          return;
+        }
+
+        // 🔔 อัปเดตตัวเลขแจ้งเตือนทันทีโดยไม่ต้องรอ Polling หรือรีเฟรชหน้าจอ!
+        refreshBadgesImmediately();
+
         Swal.fire({
-          icon: 'warning',
-          title: 'เวลาทับซ้อนกัน',
-          text: res.message,
+          icon: 'success',
+          title: 'จองห้องประชุมสำเร็จ!',
+          text: 'รหัสการจอง: ' + res.data.booking.BookingID,
           confirmButtonColor: '#0f4c81',
-          confirmButtonText: 'เลือกช่วงเวลาใหม่'
+          confirmButtonText: '<i class="bi bi-qr-code"></i> ดูรายละเอียด & QR Code'
+        }).then(function() {
+          openBookingDetailModal(res.data.booking.BookingID);
         });
-        return;
-      }
 
-      Swal.fire({
-        icon: 'success',
-        title: 'จองห้องประชุมสำเร็จ!',
-        text: 'รหัสการจอง: ' + res.data.booking.BookingID,
-        confirmButtonColor: '#0f4c81',
-        confirmButtonText: '<i class="bi bi-qr-code"></i> ดูรายละเอียด & QR Code'
-      }).then(function() {
-        openBookingDetailModal(res.data.booking.BookingID);
-      });
+        document.getElementById('bookingForm').reset();
+        document.getElementById('bkDate').value = payload.date;
+        document.getElementById('availCheckDate').value = payload.date;
 
-      document.getElementById('bookingForm').reset();
-      document.getElementById('bkDate').value = payload.date;
-      document.getElementById('availCheckDate').value = payload.date;
+        if (STATE.user.authenticated) {
+          document.getElementById('bkName').value = STATE.user.name || '';
+          document.getElementById('bkEmail').value = STATE.user.email || '';
+          if (STATE.user.department) document.getElementById('bkDept').value = STATE.user.department;
+          if (STATE.user.phone) document.getElementById('bkPhone').value = STATE.user.phone;
+        }
 
-      if (STATE.user.authenticated) {
-        document.getElementById('bkName').value = STATE.user.name || '';
-        document.getElementById('bkEmail').value = STATE.user.email || '';
-        if (STATE.user.department) document.getElementById('bkDept').value = STATE.user.department;
-        if (STATE.user.phone) document.getElementById('bkPhone').value = STATE.user.phone;
-      }
-
-      onBookingDateChanged();
-      renderBookingLayoutCards();
-    })
+        onBookingDateChanged();
+        renderBookingLayoutCards();
+      })
     .catch(function(err) {
       Swal.fire({ icon: 'error', title: 'บันทึกการจองไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
     })
@@ -1378,7 +1381,112 @@ function submitBookingForm(e) {
       setLoading(false);
     });
 }
+/* ==========================================================================
+ * Real-time Auto-Polling & Immediate Badge Refresh System
+ * ======================================================================== */
+var POLL_INTERVAL_MS = 15000; // ตรวจสอบอัตโนมัติทุก 15 วินาที
 
+function refreshBadgesImmediately() {
+  if (!STATE.user.authenticated || ['Admin', 'Approver'].indexOf(STATE.user.role) === -1) return;
+  fetchNotificationBadgesSilent(false);
+}
+
+function startNotificationPolling() {
+  stopNotificationPolling();
+  if (!STATE.user.authenticated || ['Admin', 'Approver'].indexOf(STATE.user.role) === -1) {
+    return;
+  }
+
+  // ดึงค่าครั้งแรกทันที
+  fetchNotificationBadgesSilent(true);
+
+  // ตั้งเวลาวนลูปตรวจสอบเบื้องหลังทุก 15 วินาที
+  STATE.pollTimer = setInterval(function() {
+    if (!document.hidden) {
+      fetchNotificationBadgesSilent(false);
+    }
+  }, POLL_INTERVAL_MS);
+}
+
+function stopNotificationPolling() {
+  if (STATE.pollTimer) {
+    clearInterval(STATE.pollTimer);
+    STATE.pollTimer = null;
+  }
+  STATE.lastBadgeBookings = null;
+  STATE.lastBadgeUsers = null;
+  document.title = 'ระบบจองห้องประชุมออนไลน์ | เทศบาลเมืองสมุทรสงคราม';
+}
+
+// เมื่อสลับแท็บกลับมาหน้าเว็บ ให้ดึงข้อมูลใหม่ทันที
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && STATE.user.authenticated && ['Admin', 'Approver'].indexOf(STATE.user.role) !== -1) {
+    fetchNotificationBadgesSilent(false);
+  }
+});
+
+function fetchNotificationBadgesSilent(isInitial) {
+  if (!STATE.user.authenticated || ['Admin', 'Approver'].indexOf(STATE.user.role) === -1) return;
+
+  callGas('getNotificationBadges', STATE.token)
+    .then(function(res) {
+      var data = res.data || { pendingBookings: 0, pendingUsers: 0 };
+      var newBookings = Number(data.pendingBookings) || 0;
+      var newUsers = Number(data.pendingUsers) || 0;
+
+      // 1. อัปเดตตัวเลข Badge บน Sidebar
+      updatePendingBadgeCount(newBookings);
+      if (STATE.user.role === 'Admin') {
+        updateAdminPendingBadge(newUsers);
+      }
+
+      // 2. แสดงตัวเลขแจ้งเตือนบน Title แท็บเบราว์เซอร์ เช่น (1) ระบบจองห้อง...
+      var totalAlert = newBookings + (STATE.user.role === 'Admin' ? newUsers : 0);
+      document.title = (totalAlert > 0 ? '(' + totalAlert + ') ' : '') + 'ระบบจองห้องประชุมออนไลน์ | เทศบาลเมืองสมุทรสงคราม';
+
+      // 3. หากมีรายการเพิ่มขึ้นมาจากรอบก่อน ให้แจ้งเตือน Toast และรีโหลดตารางให้อัตโนมัติ
+      if (!isInitial) {
+        if (STATE.lastBadgeBookings !== null && newBookings > STATE.lastBadgeBookings) {
+          var diffB = newBookings - STATE.lastBadgeBookings;
+          showToast('🔔 มีรายการจองห้องประชุมใหม่รออนุมัติ (+' + diffB + ' รายการ)', 'info');
+          refreshActiveViews();
+        }
+        if (STATE.user.role === 'Admin' && STATE.lastBadgeUsers !== null && newUsers > STATE.lastBadgeUsers) {
+          var diffU = newUsers - STATE.lastBadgeUsers;
+          showToast('👤 มีผู้ลงทะเบียนใหม่รออนุมัติ (+' + diffU + ' บัญชี)', 'warning');
+          refreshActiveUsersTab();
+        }
+      }
+
+      STATE.lastBadgeBookings = newBookings;
+      STATE.lastBadgeUsers = newUsers;
+    })
+    .catch(function() {});
+}
+
+function refreshActiveViews() {
+  var approvalView = document.getElementById('view-approval');
+  var dashView = document.getElementById('view-dashboard');
+  var adminView = document.getElementById('view-admin');
+
+  if (approvalView && approvalView.classList.contains('active')) {
+    loadApprovalViewData();
+  }
+  if (dashView && dashView.classList.contains('active')) {
+    loadDashboard();
+  }
+  if (adminView && adminView.classList.contains('active')) {
+    loadAdminBookings();
+  }
+}
+
+function refreshActiveUsersTab() {
+  var usersPanel = document.getElementById('admin-tab-users');
+  var adminView = document.getElementById('view-admin');
+  if (adminView && adminView.classList.contains('active') && usersPanel && usersPanel.classList.contains('active')) {
+    loadAdminUsers();
+  }
+}
 /* ==========================================================================
  * Rooms Directory & My Bookings
  * ======================================================================== */
