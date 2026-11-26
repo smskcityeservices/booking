@@ -1161,18 +1161,10 @@ function executeBookingSubmit(payload) {
         return;
       }
 
+      // รีเฟรชตัวเลขแจ้งเตือน Badge ทันที
       refreshBadgesImmediately();
 
-      Swal.fire({
-        icon: 'success',
-        title: 'จองห้องประชุมสำเร็จ!',
-        text: 'รหัสการจอง: ' + res.data.booking.BookingID,
-        confirmButtonColor: '#0f4c81',
-        confirmButtonText: '<i class="bi bi-qr-code"></i> ดูรายละเอียด & QR Code'
-      }).then(function() {
-        openBookingDetailModal(res.data.booking.BookingID);
-      });
-
+      // ล้างข้อมูลในฟอร์มจองห้องเพื่อเตรียมพร้อมสำหรับการจองครั้งถัดไป
       document.getElementById('bookingForm').reset();
       document.getElementById('bkDate').value = payload.date;
       document.getElementById('availCheckDate').value = payload.date;
@@ -1186,9 +1178,29 @@ function executeBookingSubmit(payload) {
 
       onBookingDateChanged();
       renderBookingLayoutCards();
+
+      // 🚀 แสดงข้อความสำเร็จ และเปลี่ยนหน้าไปยัง "รายการจองของฉัน" อัตโนมัติ
+      Swal.fire({
+        icon: 'success',
+        title: 'จองห้องประชุมสำเร็จ!',
+        html: 'รหัสการจอง: <strong>' + escapeHtml(res.data.booking.BookingID) + '</strong><br>' +
+              '<small style="color:#64748b;">ระบบกำลังนำคุณไปยังหน้ารายการจองของฉัน...</small>',
+        confirmButtonColor: '#0f4c81',
+        confirmButtonText: '<i class="bi bi-journal-check"></i> ไปที่รายการจองของฉัน',
+        timer: 2500,
+        timerProgressBar: true
+      }).then(function() {
+        // นำทางไปยังหน้ารายการจองของฉัน และดึงข้อมูลล่าสุดมาแสดงทันที
+        navigateTo('mybookings');
+      });
     })
     .catch(function(err) {
-      Swal.fire({ icon: 'error', title: 'บันทึกการจองไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
+      Swal.fire({
+        icon: 'error',
+        title: 'บันทึกการจองไม่สำเร็จ',
+        text: err.message,
+        confirmButtonColor: '#0f4c81'
+      });
     })
     .finally(function() {
       if (btn) btn.disabled = false;
