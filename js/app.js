@@ -2908,104 +2908,59 @@ function initGoogleIdentityServices() {
   } catch (err) {}
 }
 
+/**
+ * Callback function เมื่อผู้ใช้ Login ผ่านปุ่ม Sign in with Google สำเร็จ
+ * response จะเป็นออบเจกต์ที่มี credential (id_token) ส่งมาจาก Google
+ */
 function handleGoogleSignInCallback(response) {
-    if (!response || !response.credential) return;
-
-    setLoading(true, 'กำลังตรวจสอบบัญชี Google...');
-    
-    callGas('loginWithGoogle', { idToken: response.credential })
-      .then(function(res) {
-        // หากเป็นสมาชิกใหม่ ต้องเด้งฟอร์มลงทะเบียน
-        if (res.data && res.data.needRegistration) {
-          setLoading(false);
-          
-          var gp = res.data.googleProfile;
-          document.getElementById('gRegEmail').value = gp.email;
-          document.getElementById('gRegName').value = gp.name;
-          document.getElementById('gRegGoogleSub').value = gp.googleSub;
-
-          var deptSel = document.getElementById('gRegDept');
-          if (deptSel) {
-            deptSel.innerHTML = '<option value="">-- เลือกกอง/สำนัก --</option>' + 
-              STATE.departments.map(function(d){ return '<option value="'+escapeHtml(d)+'">'+escapeHtml(d)+'</option>'; }).join('');
-          }
-
-          // ปิด Modal เข้าสู่ระบบ
-          closeModal('loginModal');
-          
-          // สั่งให้เปิด Modal ลงทะเบียน Google หลังจากผ่านไป 500ms เพื่อให้ UI พร้อม
-          setTimeout(function() {
-            openModal('googleRegModal');
-          }, 500);
-          
-          return;
-        }
-
-        // กรณีเป็นสมาชิกเดิมที่อนุมัติแล้ว เข้าสู่ระบบปกติ
-        STATE.token = res.data.token;
-        sessionStorage.setItem('MRB_AUTH_TOKEN', STATE.token);
-        STATE.user = res.data.user;
-
-        closeModal('loginModal');
-        updateAuthUI();
-        startNotificationPolling();
-
-        Swal.fire({
-          icon: 'success',
-          title: 'เข้าสู่ระบบสำเร็จ!',
-          text: 'ยินดีต้อนรับ ' + STATE.user.name,
-          confirmButtonColor: '#0f4c81',
-          timer: 2000,
-          timerProgressBar: true
-        });
-
-        if (document.getElementById('view-dashboard').classList.contains('active')) {
-          loadDashboard();
-        }
-      })
-      .catch(function(err) {
-        setLoading(false);
-        Swal.fire({
-          icon: 'error',
-          title: 'เข้าสู่ระบบไม่สำเร็จ',
-          text: err.message,
-          confirmButtonColor: '#0f4c81'
-        });
-      });
+  if (!response || !response.credential) {
+    showToast('ไม่ได้รับข้อมูลจาก Google Sign-In', 'error');
+    return;
   }
 
-// ฟังก์ชันกดส่งข้อมูลลงทะเบียนเพิ่มเติมของ Google Account
-function submitGoogleRegistration(e) {
-  e.preventDefault();
-  setLoading(true, 'กำลังบันทึกข้อมูลการลงทะเบียน...');
+  setLoading(true, 'กำลังตรวจสอบบัญชี Google...');
 
-  var payload = {
-    email: document.getElementById('gRegEmail').value,
-    name: document.getElementById('gRegName').value,
-    department: document.getElementById('gRegDept').value,
-    phone: document.getElementById('gRegPhone').value.trim(),
-    googleSub: document.getElementById('gRegGoogleSub').value
-  };
-
-  callGas('registerGoogleAccount', payload)
+  // ส่ง idToken (JWT) ไปให้ Backend ตรวจสอบและผูกบัญชี
+  callGas('loginWithGoogle', { idToken: response.credential })
     .then(function(res) {
-      closeModal('googleRegModal');
-      document.getElementById('googleRegForm').reset();
+      // 1. บันทึก Token สำหรับเรียก API
+      STATE.token = res.data.token;
+      sessionStorage.setItem('MRB_AUTH_TOKEN', STATE.token);
+      localStorage.removeItem('MRB_AUTH_TOKEN'); // รักษาความปลอดภัย ปิด Auto-login
 
+      // 2. อัปเดตข้อมูลผู้ใช้ในระบบ
+      STATE.user = res.data.user;
+      
+      // 3. ปิด Modal และอัปเดต UI
+      closeModal('loginModal');
+      updateAuthUI();
+      startNotificationPolling();
+
+      // 4. แจ้งเตือนความสำเร็จ
       Swal.fire({
         icon: 'success',
-        title: 'ลงทะเบียนสำเร็จ!',
-        text: res.message,
+        title: 'เข้าสู่ระบบสำเร็จ!',
+        text: 'ยินดีต้อนรับ ' + STATE.user.name,
         confirmButtonColor: '#0f4c81',
-        confirmButtonText: 'ตกลง'
+        confirmButtonText: 'ตกลง',
+        timer: 2000,
+        timerProgressBar: true
       });
+
+      // 5. หากอยู่ที่หน้า Dashboard ให้รีเฟรชข้อมูล
+      if (document.getElementById('view-dashboard').classList.contains('active')) {
+        loadDashboard();
+      }
     })
     .catch(function(err) {
+      // ตรวจสอบว่าเป็นกรณีรออนุมัติหรือไม่
+      var isPending = (err.message.indexOf('รอผู้ดูแลระบบ') !== -1);
       Swal.fire({
-        icon: 'error',
-        title: 'ลงทะเบียนไม่สำเร็จ',
+        icon: isPending ? 'info' : 'error',
+        title: isPending ? 'รอการอนุมัติ' : 'เข้าสู่ระบบไม่สำเร็จ',
         text: err.message,
-        confirmButtonColor: '#0f4c81'
+        confirmButtonColor: '#0f4c81',
+        confirmButtonText: 'ตกลง'
       });
     })
     .finally(function() {
