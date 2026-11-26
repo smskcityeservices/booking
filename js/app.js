@@ -2909,6 +2909,27 @@ function handleGoogleSignInCallback(response) {
   setLoading(true, 'กำลังตรวจสอบบัญชี Google...');
   callGas('loginWithGoogle', { idToken: response.credential })
     .then(function(res) {
+      // กรณีเป็นสมาชิกใหม่ ต้องเด้งฟอร์มบังคับกรอก กอง/สำนัก และเบอร์โทร
+      if (res.data && res.data.needRegistration) {
+        setLoading(false);
+        var gp = res.data.googleProfile;
+        document.getElementById('gRegEmail').value = gp.email;
+        document.getElementById('gRegName').value = gp.name;
+        document.getElementById('gRegGoogleSub').value = gp.googleSub;
+
+        // เติม Dropdown กอง/สำนักใน Modal ลงทะเบียน Google
+        var deptSel = document.getElementById('gRegDept');
+        if (deptSel) {
+          deptSel.innerHTML = '<option value="">-- เลือกกอง/สำนัก --</option>' + 
+            STATE.departments.map(function(d){ return '<option value="'+escapeHtml(d)+'">'+escapeHtml(d)+'</option>'; }).join('');
+        }
+
+        closeModal('loginModal');
+        openModal('googleRegModal');
+        return;
+      }
+
+      // กรณีเป็นสมาชิกเดิมที่อนุมัติแล้ว เข้าสู่ระบบปกติ
       STATE.token = res.data.token;
       sessionStorage.setItem('MRB_AUTH_TOKEN', STATE.token);
       STATE.user = res.data.user;
@@ -2932,11 +2953,49 @@ function handleGoogleSignInCallback(response) {
     })
     .catch(function(err) {
       Swal.fire({
-        icon: err.code === 'PENDING_APPROVAL' ? 'info' : 'error',
-        title: err.code === 'PENDING_APPROVAL' ? 'รอการอนุมัติบัญชี' : 'เข้าสู่ระบบไม่สำเร็จ',
+        icon: 'error',
+        title: 'เข้าสู่ระบบไม่สำเร็จ',
         text: err.message,
+        confirmButtonColor: '#0f4c81'
+      });
+    })
+    .finally(function() {
+      setLoading(false);
+    });
+}
+
+// ฟังก์ชันกดส่งข้อมูลลงทะเบียนเพิ่มเติมของ Google Account
+function submitGoogleRegistration(e) {
+  e.preventDefault();
+  setLoading(true, 'กำลังบันทึกข้อมูลการลงทะเบียน...');
+
+  var payload = {
+    email: document.getElementById('gRegEmail').value,
+    name: document.getElementById('gRegName').value,
+    department: document.getElementById('gRegDept').value,
+    phone: document.getElementById('gRegPhone').value.trim(),
+    googleSub: document.getElementById('gRegGoogleSub').value
+  };
+
+  callGas('registerGoogleAccount', payload)
+    .then(function(res) {
+      closeModal('googleRegModal');
+      document.getElementById('googleRegForm').reset();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'ลงทะเบียนสำเร็จ!',
+        text: res.message,
         confirmButtonColor: '#0f4c81',
         confirmButtonText: 'ตกลง'
+      });
+    })
+    .catch(function(err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'ลงทะเบียนไม่สำเร็จ',
+        text: err.message,
+        confirmButtonColor: '#0f4c81'
       });
     })
     .finally(function() {
