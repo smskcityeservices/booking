@@ -336,7 +336,16 @@
   .menu-badge-count {
     margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; box-shadow: 0 2px 5px rgba(220, 38, 38, 0.3);
   }
-
+/* ปรับแต่ง Z-Index ของ Modal ทั้งหมดให้ไม่ทับซ้อนกัน และอยู่บนสุด */
+  .modal-backdrop {
+    z-index: 1070 !important;
+  }
+  #googleRegModal {
+    z-index: 1080 !important; /* ให้ Modal ลงทะเบียน Google อยู่บนสุดเสมอ */
+  }
+  .swal2-container {
+    z-index: 1090 !important; /* SweetAlert2 อยู่เหนือสุด */
+  }
   .swal2-popup { font-family: 'Sarabun', sans-serif !important; border-radius: 16px !important; }
   .swal2-title { font-size: 19px !important; color: var(--primary) !important; }
 /* FullCalendar List View & Mobile Responsive */
