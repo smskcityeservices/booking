@@ -2907,33 +2907,36 @@ function handleGoogleSignInCallback(response) {
     if (!response || !response.credential) return;
 
     setLoading(true, 'กำลังตรวจสอบบัญชี Google...');
+    
     callGas('loginWithGoogle', { idToken: response.credential })
       .then(function(res) {
-        // หากเป็นสมาชิกใหม่ ให้เด้งฟอร์มลงทะเบียน
+        // หากเป็นสมาชิกใหม่ ต้องเด้งฟอร์มลงทะเบียน
         if (res.data && res.data.needRegistration) {
-          setLoading(false); // ปิด Loading ก่อนเปิด Modal
+          setLoading(false);
           
           var gp = res.data.googleProfile;
           document.getElementById('gRegEmail').value = gp.email;
           document.getElementById('gRegName').value = gp.name;
           document.getElementById('gRegGoogleSub').value = gp.googleSub;
 
-          // เติม Dropdown กอง/สำนัก
           var deptSel = document.getElementById('gRegDept');
           if (deptSel) {
             deptSel.innerHTML = '<option value="">-- เลือกกอง/สำนัก --</option>' + 
               STATE.departments.map(function(d){ return '<option value="'+escapeHtml(d)+'">'+escapeHtml(d)+'</option>'; }).join('');
           }
 
-          // 🛑 หัวใจสำคัญ: ปิด Modal เก่า แล้วหน่วงเวลาเล็กน้อยก่อนเปิด Modal ใหม่
+          // ปิด Modal เข้าสู่ระบบ
           closeModal('loginModal');
+          
+          // สั่งให้เปิด Modal ลงทะเบียน Google หลังจากผ่านไป 500ms เพื่อให้ UI พร้อม
           setTimeout(function() {
             openModal('googleRegModal');
-          }, 400); // รอ 0.4 วินาทีเพื่อให้ Modal เก่าปิดสนิท
+          }, 500);
+          
           return;
         }
 
-        // กรณีเป็นสมาชิกเดิมที่อนุมัติแล้ว
+        // กรณีเป็นสมาชิกเดิมที่อนุมัติแล้ว เข้าสู่ระบบปกติ
         STATE.token = res.data.token;
         sessionStorage.setItem('MRB_AUTH_TOKEN', STATE.token);
         STATE.user = res.data.user;
@@ -2950,13 +2953,19 @@ function handleGoogleSignInCallback(response) {
           timer: 2000,
           timerProgressBar: true
         });
-        loadDashboard();
+
+        if (document.getElementById('view-dashboard').classList.contains('active')) {
+          loadDashboard();
+        }
       })
       .catch(function(err) {
-        Swal.fire({ icon: 'error', title: 'เข้าสู่ระบบไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
-      })
-      .finally(function() {
         setLoading(false);
+        Swal.fire({
+          icon: 'error',
+          title: 'เข้าสู่ระบบไม่สำเร็จ',
+          text: err.message,
+          confirmButtonColor: '#0f4c81'
+        });
       });
   }
 
