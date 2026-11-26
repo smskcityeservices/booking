@@ -5,7 +5,7 @@
  * ============================================================================
  */
 // ใส่ Google Client ID ที่ได้จาก Google Cloud Console
-var GOOGLE_CLIENT_ID = "472614838836-mu6njogmslfg7vq6augavhsmjbm76trh.apps.googleusercontent.com";
+var GOOGLE_CLIENT_ID = "146666427453-ml6lhhnemb9l3ok4urr5oia8lr883e7j.apps.googleusercontent.com";
 // [สำคัญ] นำ Web App URL (/exec) ที่ได้จากการ Deploy Google Apps Script มาวางที่นี่
 var GAS_API_URL = "https://script.google.com/macros/s/AKfycbzy19hiTKNEJ5ELB9s6ZaFx3eF6kfONlv3oH1TxMdU9oB6G2bROP-X-l-SYn_wGSjUcNQ/exec";
 
