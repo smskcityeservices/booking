@@ -108,6 +108,13 @@ function callGas(fnName) {
   } else if (fnName === 'updateUserStatus') {
     reqToken = args[0] || STATE.token;
     reqPayload = { email: args[1], newStatus: args[2], reason: args[3] || '' };
+    } else if (fnName === 'loginWithGoogle') {
+    reqToken = ''; // การล็อกอินยังไม่มี Token ในระบบ ให้ส่งค่าว่าง
+    reqPayload = { idToken: args[0] && args[0].idToken ? args[0].idToken : args[0] };
+  } else if (fnName === 'toggleGoogleBinding') {
+    reqToken = args[0] || STATE.token;
+    reqPayload = { idToken: args[1] && args[1].idToken ? args[1].idToken : args[1], actionType: args[1] && args[1].actionType ? args[1].actionType : 'link' };
+  }
   } else if (fnName === 'getAuditLogs') {
     reqToken = args[0] || STATE.token;
     reqPayload = { limit: args[1] || 100 };
