@@ -257,45 +257,72 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function bootstrapApp() {
-    setLoading(true, 'กำลังโหลดข้อมูลระบบ...');
-    return callGas('getInitialAppData', STATE.token)
-      .then(function(res) {
-        var data = res.data;
-        STATE.user = data.user;
-        STATE.settings = data.settings;
-        STATE.departments = data.departments || [];
-        STATE.rooms = data.rooms || [];
-        STATE.layouts = (data.layouts && data.layouts.length > 0) ? data.layouts : DEFAULT_LAYOUTS;
-        STATE.webAppUrl = data.webAppUrl || '';
+  setLoading(true, 'กำลังเชื่อมต่อข้อมูลระบบ...');
 
-        var orgLabel = document.getElementById('orgNameLabel');
-        if (orgLabel) orgLabel.textContent = STATE.settings.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม';
+  return callGas('getInitialAppData', STATE.token)
+    .then(function(res) {
+      var data = res.data;
+      STATE.user = data.user;
+      STATE.settings = data.settings;
+      STATE.departments = data.departments || [];
+      STATE.rooms = data.rooms || [];
+      STATE.layouts = (data.layouts && data.layouts.length > 0) ? data.layouts : DEFAULT_LAYOUTS;
+      STATE.webAppUrl = data.webAppUrl || '';
 
-        populateDropdowns();
-        renderBookingLayoutCards();
-        updateAuthUI();
+      // อัปเดตชื่อหน่วยงานบนหัวแถบเมนู
+      var orgLabel = document.getElementById('orgNameLabel');
+      if (orgLabel) {
+        orgLabel.textContent = STATE.settings.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม';
+      }
 
-        var today = todayIso();
-        ['availCheckDate', 'bkDate'].forEach(function(id) {
-          var input = document.getElementById(id);
-          if (input) { input.value = today; input.min = today; }
-        });
+      // 1. เติมตัวเลือกใน Dropdowns ทั้งหมด
+      populateDropdowns();
 
-        updateTimeSlotOptions();
-        
-        // 🔔 เริ่มต้นระบบแจ้งเตือน (Polling) ถ้า Admin/Approver เข้าใช้งาน
-        startNotificationPolling();
+      // 2. เรนเดอร์การ์ดรูปแบบการจัดโต๊ะเก้าอี้ห้องประชุม
+      renderBookingLayoutCards();
 
-        var targetView = (window.APP_BOOT && window.APP_BOOT.initialPage) ? window.APP_BOOT.initialPage : 'dashboard';
-        navigateTo(targetView);
-      })
-      .catch(function(err) {
-        Swal.fire({ icon: 'error', title: 'เชื่อมต่อระบบไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
-      })
-      .finally(function() {
-        setLoading(false);
+      // 3. อัปเดตสถานะผู้ใช้งาน (แสดง/ซ่อน เมนูตามสิทธิ์)
+      updateAuthUI();
+
+      // 4. ตั้งค่าวันที่เริ่มต้นสำหรับช่องเลือกวัน (วันนี้เป็นต้นไป)
+      var today = todayIso();
+      ['availCheckDate', 'bkDate'].forEach(function(id) {
+        var input = document.getElementById(id);
+        if (input) {
+          input.value = today;
+          input.min = today;
+        }
       });
-  }
+
+      // 5. สร้างตัวเลือกเวลาเริ่มต้น-สิ้นสุด (กรองเวลาในอดีตทิ้งอัตโนมัติหากเป็นวันนี้)
+      updateTimeSlotOptions();
+
+      // 6. เริ่มต้นระบบ Polling ตรวจสอบตัวเลข Badge แจ้งเตือน Real-time เบื้องหลัง
+      startNotificationPolling();
+
+      // 7. เริ่มต้นปุ่มเข้าสู่ระบบด้วย Google Account (GIS)
+      if (typeof initGoogleIdentityServices === 'function') {
+        setTimeout(initGoogleIdentityServices, 300);
+      }
+
+      // 8. นำทางไปยังหน้าเป้าหมายเริ่มต้น (หรือเปิดรายละเอียดจาก QR Code)
+      var targetView = (window.APP_BOOT && window.APP_BOOT.initialPage && document.getElementById('view-' + window.APP_BOOT.initialPage))
+        ? window.APP_BOOT.initialPage : 'dashboard';
+      navigateTo(targetView);
+    })
+    .catch(function(err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'เชื่อมต่อระบบไม่สำเร็จ',
+        text: err.message,
+        confirmButtonColor: '#0f4c81',
+        confirmButtonText: 'ลองใหม่อีกครั้ง'
+      });
+    })
+    .finally(function() {
+      setLoading(false);
+    });
+}
 
 function checkAdminNotifications() {
   // 1. เช็กจำนวนการจองรออนุมัติ (Approver & Admin)
@@ -877,17 +904,20 @@ function openLoginModal() {
 }
 
 function openProfileModal() {
-  if (!STATE.user.authenticated) {
+  if (!STATE.user || !STATE.user.authenticated) {
     openLoginModal();
     return;
   }
-  document.getElementById('profEmail').value = STATE.user.email;
-  document.getElementById('profName').value = STATE.user.name;
+
+  // 1. นำข้อมูลปัจจุบันมาแสดงในฟอร์ม
+  document.getElementById('profEmail').value = STATE.user.email || '';
+  document.getElementById('profName').value = STATE.user.name || '';
   document.getElementById('profPhone').value = STATE.user.phone || '';
   document.getElementById('profPass').value = '';
 
+  // 2. เติมตัวเลือกหน่วยงาน (กอง/สำนัก) และเลือกค่าเดิมไว้
   var deptSel = document.getElementById('profDept');
-  if (deptSel) {
+  if (deptSel && STATE.departments) {
     var deptHtml = '<option value="">-- เลือกกอง/สำนัก --</option>';
     STATE.departments.forEach(function(d) {
       var sel = (d === STATE.user.department) ? 'selected' : '';
@@ -896,7 +926,91 @@ function openProfileModal() {
     deptSel.innerHTML = deptHtml;
   }
 
+  // 3. จัดการสถานะและการแสดงผลการผูกบัญชี Google Account
+  var gBadge = document.getElementById('profGoogleBadge');
+  var gAction = document.getElementById('profGoogleActionWrap');
+
+  if (gBadge && gAction) {
+    var isLinked = Boolean(STATE.user.googleLinked);
+    gBadge.className = 'badge ' + (isLinked ? 'badge-approved' : 'badge-cancelled');
+    gBadge.textContent = isLinked ? 'ผูกแล้ว' : 'ยังไม่ผูก';
+
+    if (isLinked) {
+      gAction.innerHTML = 
+        '<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">' +
+          '<small style="color:#16a34a;"><i class="bi bi-check-circle-fill"></i> ผูกกับบัญชี Google เรียบร้อยแล้ว</small>' +
+          '<button type="button" class="btn btn-outline btn-sm" onclick="unlinkGoogleClick()" style="color:#dc2626; border-color:#fca5a5; padding:4px 10px;">' +
+            '<i class="bi bi-x-circle"></i> ยกเลิกการผูก' +
+          '</button>' +
+        '</div>';
+    } else {
+      gAction.innerHTML = 
+        '<div>' +
+          '<small style="color:var(--muted); display:block; margin-bottom:6px;">คุณสามารถผูกบัญชี Google เพื่อใช้เข้าสู่ระบบได้สะดวกรวดเร็ว</small>' +
+          '<div id="googleLinkBtnWrap"></div>' +
+        '</div>';
+
+      // เรนเดอร์ปุ่ม Google สำหรับผูกบัญชี
+      if (typeof google !== 'undefined' && google.accounts && typeof GOOGLE_CLIENT_ID !== 'undefined' && GOOGLE_CLIENT_ID.indexOf('apps.googleusercontent.com') !== -1) {
+        try {
+          google.accounts.id.renderButton(document.getElementById('googleLinkBtnWrap'), {
+            theme: 'outline',
+            size: 'medium',
+            text: 'continue_with',
+            shape: 'pill',
+            locale: 'th'
+          });
+        } catch (e) {}
+      }
+    }
+  }
+
   openModal('profileModal');
+}
+
+/**
+ * ยกเลิกการผูกบัญชี Google Account ของผู้ใช้งานปัจจุบัน
+ */
+function unlinkGoogleClick() {
+  Swal.fire({
+    title: 'ยกเลิกการผูกบัญชี Google?',
+    text: 'หลังจากยกเลิกแล้ว คุณจะต้องเข้าสู่ระบบด้วยอีเมลและรหัสผ่าน/PIN แทน',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'ยืนยันยกเลิกการผูก',
+    cancelButtonText: 'ปิด'
+  }).then(function(result) {
+    if (result.isConfirmed) {
+      setLoading(true, 'กำลังยกเลิกการผูกบัญชี...');
+      callGas('toggleGoogleBinding', STATE.token, { actionType: 'unlink' })
+        .then(function(res) {
+          STATE.user.googleLinked = false;
+          openProfileModal(); // รีเฟรชสถานะใน Modal ทันที
+          Swal.fire({
+            icon: 'success',
+            title: 'ยกเลิกการผูกสำเร็จ',
+            text: res.message || 'ยกเลิกการผูกบัญชี Google เรียบร้อยแล้ว',
+            confirmButtonColor: '#0f4c81',
+            timer: 2000,
+            timerProgressBar: true
+          });
+        })
+        .catch(function(err) {
+          Swal.fire({
+            icon: 'error',
+            title: 'เกิดข้อผิดพลาด',
+            text: err.message,
+            confirmButtonColor: '#0f4c81',
+            confirmButtonText: 'ตกลง'
+          });
+        })
+        .finally(function() {
+          setLoading(false);
+        });
+    }
+  });
 }
 
 function submitProfileUpdate(e) {
