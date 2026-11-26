@@ -114,7 +114,6 @@ function callGas(fnName) {
   } else if (fnName === 'toggleGoogleBinding') {
     reqToken = args[0] || STATE.token;
     reqPayload = { idToken: args[1] && args[1].idToken ? args[1].idToken : args[1], actionType: args[1] && args[1].actionType ? args[1].actionType : 'link' };
-  }
   } else if (fnName === 'getAuditLogs') {
     reqToken = args[0] || STATE.token;
     reqPayload = { limit: args[1] || 100 };
