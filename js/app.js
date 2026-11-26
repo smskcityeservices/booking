@@ -6,7 +6,7 @@
  */
 
 // [สำคัญ] นำ Web App URL (/exec) ที่ได้จากการ Deploy Google Apps Script มาวางที่นี่
-var GAS_API_URL = "https://script.google.com/macros/s/AKfycbzydq9TyPuKDOZi_7qDIhaYRGpHpZsMfaP-MtEi2mRgGHbBy_4BLY6fs644yJaXKw4Bjg/exec";
+var GAS_API_URL = "https://script.google.com/macros/s/AKfycbzy19hiTKNEJ5ELB9s6ZaFx3eF6kfONlv3oH1TxMdU9oB6G2bROP-X-l-SYn_wGSjUcNQ/exec";
 
 /* ==========================================================================
  * Global State & Default Seating Layouts
