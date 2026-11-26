@@ -109,8 +109,8 @@ function callGas(fnName) {
     reqToken = args[0] || STATE.token;
     reqPayload = { email: args[1], newStatus: args[2], reason: args[3] || '' };
     } else if (fnName === 'loginWithGoogle') {
-    reqToken = ''; // การล็อกอินยังไม่มี Token ในระบบ ให้ส่งค่าว่าง
-    reqPayload = { idToken: args[0] && args[0].idToken ? args[0].idToken : args[0] };
+    reqToken = '';
+    reqPayload = { idToken: (args[0] && args[0].idToken ? args[0].idToken : args[0]) };
   } else if (fnName === 'toggleGoogleBinding') {
     reqToken = args[0] || STATE.token;
     reqPayload = { idToken: args[1] && args[1].idToken ? args[1].idToken : args[1], actionType: args[1] && args[1].actionType ? args[1].actionType : 'link' };
@@ -180,37 +180,56 @@ function initGoogleIdentityServices() {
   } catch (err) {}
 }
 
+/**
+ * Callback function เมื่อผู้ใช้ Login ผ่านปุ่ม Sign in with Google สำเร็จ
+ * response จะเป็นออบเจกต์ที่มี credential (id_token) ส่งมาจาก Google
+ */
 function handleGoogleSignInCallback(response) {
-  if (!response || !response.credential) return;
+  if (!response || !response.credential) {
+    showToast('ไม่ได้รับข้อมูลจาก Google Sign-In', 'error');
+    return;
+  }
 
   setLoading(true, 'กำลังตรวจสอบบัญชี Google...');
+
+  // ส่ง idToken (JWT) ไปให้ Backend ตรวจสอบและผูกบัญชี
   callGas('loginWithGoogle', { idToken: response.credential })
     .then(function(res) {
+      // 1. บันทึก Token สำหรับเรียก API
       STATE.token = res.data.token;
       sessionStorage.setItem('MRB_AUTH_TOKEN', STATE.token);
-      STATE.user = res.data.user;
+      localStorage.removeItem('MRB_AUTH_TOKEN'); // รักษาความปลอดภัย ปิด Auto-login
 
+      // 2. อัปเดตข้อมูลผู้ใช้ในระบบ
+      STATE.user = res.data.user;
+      
+      // 3. ปิด Modal และอัปเดต UI
       closeModal('loginModal');
       updateAuthUI();
       startNotificationPolling();
 
+      // 4. แจ้งเตือนความสำเร็จ
       Swal.fire({
         icon: 'success',
         title: 'เข้าสู่ระบบสำเร็จ!',
         text: 'ยินดีต้อนรับ ' + STATE.user.name,
         confirmButtonColor: '#0f4c81',
+        confirmButtonText: 'ตกลง',
         timer: 2000,
         timerProgressBar: true
       });
 
+      // 5. หากอยู่ที่หน้า Dashboard ให้รีเฟรชข้อมูล
       if (document.getElementById('view-dashboard').classList.contains('active')) {
         loadDashboard();
       }
     })
     .catch(function(err) {
+      // ตรวจสอบว่าเป็นกรณีรออนุมัติหรือไม่
+      var isPending = (err.message.indexOf('รอผู้ดูแลระบบ') !== -1);
       Swal.fire({
-        icon: err.code === 'PENDING_APPROVAL' ? 'info' : 'error',
-        title: err.code === 'PENDING_APPROVAL' ? 'รอการอนุมัติบัญชี' : 'เข้าสู่ระบบไม่สำเร็จ',
+        icon: isPending ? 'info' : 'error',
+        title: isPending ? 'รอการอนุมัติ' : 'เข้าสู่ระบบไม่สำเร็จ',
         text: err.message,
         confirmButtonColor: '#0f4c81',
         confirmButtonText: 'ตกลง'
