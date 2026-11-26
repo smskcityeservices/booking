@@ -1296,43 +1296,113 @@ function syncSelectedRoomCard() {
   });
 }
 
-function submitBookingForm(e) {
-  e.preventDefault();
-  var seatingVal = document.getElementById('bkSeatingLayout') ? document.getElementById('bkSeatingLayout').value : 'แบบชั้นเรียน (Classroom)';
+/* ==========================================================================
+   * Booking Form Submission with Summary & Confirmation Dialog
+   * ======================================================================== */
+  function submitBookingForm(e) {
+    e.preventDefault();
+    var seatingVal = document.getElementById('bkSeatingLayout') ? document.getElementById('bkSeatingLayout').value : 'แบบชั้นเรียน (Classroom)';
 
-  var payload = {
-    bookerName: document.getElementById('bkName').value.trim(),
-    department: document.getElementById('bkDept').value,
-    phone: document.getElementById('bkPhone').value.trim(),
-    userEmail: document.getElementById('bkEmail').value.trim(),
-    roomId: document.getElementById('bkRoomId').value,
-    date: document.getElementById('bkDate').value,
-    startTime: document.getElementById('bkStart').value,
-    endTime: document.getElementById('bkEnd').value,
-    topic: document.getElementById('bkTopic').value.trim(),
-    participants: Number(document.getElementById('bkParticipants').value),
-    seatingLayout: seatingVal,
-    meetingType: document.getElementById('bkMeetingType').value,
-    equipment: document.getElementById('bkEquipment').value.trim(),
-    detail: document.getElementById('bkDetail').value.trim()
-  };
+    var payload = {
+      bookerName: document.getElementById('bkName').value.trim(),
+      department: document.getElementById('bkDept').value,
+      phone: document.getElementById('bkPhone').value.trim(),
+      userEmail: document.getElementById('bkEmail').value.trim(),
+      roomId: document.getElementById('bkRoomId').value,
+      date: document.getElementById('bkDate').value,
+      startTime: document.getElementById('bkStart').value,
+      endTime: document.getElementById('bkEnd').value,
+      topic: document.getElementById('bkTopic').value.trim(),
+      participants: Number(document.getElementById('bkParticipants').value),
+      seatingLayout: seatingVal,
+      meetingType: document.getElementById('bkMeetingType').value,
+      equipment: document.getElementById('bkEquipment').value.trim(),
+      detail: document.getElementById('bkDetail').value.trim()
+    };
 
-  if (timeToMinutes(payload.startTime) >= timeToMinutes(payload.endTime)) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'เวลาไม่ถูกต้อง',
-      text: 'เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด',
-      confirmButtonColor: '#0f4c81',
-      confirmButtonText: 'ตกลง'
-    });
-    return;
+    // 1. ตรวจสอบความถูกต้องของช่วงเวลา
+    if (timeToMinutes(payload.startTime) >= timeToMinutes(payload.endTime)) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'เวลาไม่ถูกต้อง',
+        text: 'เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด',
+        confirmButtonColor: '#0f4c81',
+        confirmButtonText: 'ตกลง'
+      });
+      return;
+    }
+
+    // 2. แสดงหน้าต่างสรุปและยืนยันข้อมูลก่อนบันทึกจริง
+    showBookingSummaryConfirmation(payload);
   }
 
-  var btn = document.getElementById('btnSubmitBooking');
-  if (btn) btn.disabled = true;
-  setLoading(true, 'กำลังบันทึกการจองห้องประชุม...');
+  /**
+   * แสดงหน้าต่างสรุปข้อมูลการจองห้องประชุม (Summary Modal)
+   */
+  function showBookingSummaryConfirmation(payload) {
+    var room = STATE.rooms.find(function(r) { return r.RoomID === payload.roomId; }) || {};
+    var roomName = room.RoomName || payload.roomId;
+    var roomLocation = (room.Building ? room.Building : '') + (room.Floor ? ' ' + room.Floor : '');
+    var thaiDate = formatDisplayDateThai(payload.date);
+    
+    var diffMin = timeToMinutes(payload.endTime) - timeToMinutes(payload.startTime);
+    var durationText = (Math.floor(diffMin / 60) > 0 ? Math.floor(diffMin / 60) + ' ชม. ' : '') + 
+                       (diffMin % 60 > 0 ? (diffMin % 60) + ' นาที' : '');
 
-  callGas('createBooking', STATE.token, payload)
+    var summaryHtml = [
+      '<div style="text-align:left; font-size:14px; color:#1e293b; line-height:1.6;">',
+        '<div style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:12px; padding:12px 16px; margin-bottom:14px;">',
+          '<div style="font-weight:700; color:#0f4c81; font-size:16px;">🏢 ' + escapeHtml(roomName) + '</div>',
+          (roomLocation ? '<div style="font-size:12.5px; color:#64748b; margin-top:2px;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(roomLocation) + '</div>' : ''),
+          '<div style="font-size:13.5px; color:#0284c7; font-weight:600; margin-top:6px;">',
+            '<i class="bi bi-calendar3"></i> ' + escapeHtml(thaiDate) + ' &bull; <i class="bi bi-clock"></i> ' + escapeHtml(payload.startTime) + ' - ' + escapeHtml(payload.endTime) + ' น. (' + durationText + ')',
+          '</div>',
+        '</div>',
+        '<table style="width:100%; font-size:13.5px; border-collapse:collapse;">',
+          '<tr><td style="color:#64748b; width:125px; padding:4px 0; vertical-align:top;">หัวข้อประชุม:</td><td style="font-weight:700; padding:4px 0;">' + escapeHtml(payload.topic) + '</td></tr>',
+          '<tr><td style="color:#64748b; padding:4px 0; vertical-align:top;">ผู้ขอใช้ห้อง:</td><td style="padding:4px 0;">' + escapeHtml(payload.bookerName) + ' (' + escapeHtml(payload.department) + ')</td></tr>',
+          '<tr><td style="color:#64748b; padding:4px 0; vertical-align:top;">เบอร์ติดต่อ:</td><td style="padding:4px 0;">' + escapeHtml(payload.phone) + '</td></tr>',
+          '<tr><td style="color:#64748b; padding:4px 0; vertical-align:top;">ผู้เข้าร่วม:</td><td style="padding:4px 0;">' + payload.participants + ' คน (' + escapeHtml(payload.meetingType) + ')</td></tr>',
+          '<tr><td style="color:#64748b; padding:4px 0; vertical-align:top;">ผังโต๊ะเก้าอี้:</td><td style="color:#0d9488; font-weight:700; padding:4px 0;"><i class="bi bi-grid-3x3-gap"></i> ' + escapeHtml(payload.seatingLayout) + '</td></tr>',
+          (payload.equipment ? '<tr><td style="color:#64748b; padding:4px 0; vertical-align:top;">อุปกรณ์เพิ่ม:</td><td style="padding:4px 0;">' + escapeHtml(payload.equipment) + '</td></tr>' : ''),
+          (payload.detail ? '<tr><td style="color:#64748b; padding:4px 0; vertical-align:top;">รายละเอียด:</td><td style="padding:4px 0;">' + escapeHtml(payload.detail) + '</td></tr>' : ''),
+        '</table>',
+        '<div style="margin-top:12px; font-size:12px; color:#94a3b8; text-align:center; border-top:1px dashed #e2e8f0; padding-top:8px;">',
+          'กรุณาตรวจสอบข้อมูลให้ถูกต้องก่อนกดยืนยันการจอง',
+        '</div>',
+      '</div>'
+    ].join('');
+
+    Swal.fire({
+      title: '📋 สรุปและยืนยันข้อมูลการจอง',
+      html: summaryHtml,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonColor: '#0f4c81',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: '<i class="bi bi-check2-circle"></i> ยืนยันการจองห้อง',
+      cancelButtonText: '<i class="bi bi-pencil"></i> กลับไปแก้ไข',
+      reverseButtons: true,
+      customClass: {
+        popup: 'swal2-custom-popup'
+      }
+    }).then(function(result) {
+      if (result.isConfirmed) {
+        // ดำเนินการส่งข้อมูลบันทึกลงระบบจริง
+        executeBookingSubmit(payload);
+      }
+    });
+  }
+
+  /**
+   * ส่งคำขอจองห้องไปยัง Google Apps Script Backend
+   */
+  function executeBookingSubmit(payload) {
+    var btn = document.getElementById('btnSubmitBooking');
+    if (btn) btn.disabled = true;
+    setLoading(true, 'กำลังบันทึกการจองห้องประชุม...');
+
+    callGas('createBooking', STATE.token, payload)
       .then(function(res) {
         if (!res.success && res.code === 'CONFLICT') {
           performLiveAvailabilityCheck();
@@ -1346,8 +1416,10 @@ function submitBookingForm(e) {
           return;
         }
 
-        // 🔔 อัปเดตตัวเลขแจ้งเตือนทันทีโดยไม่ต้องรอ Polling หรือรีเฟรชหน้าจอ!
-        refreshBadgesImmediately();
+        // อัปเดตตัวเลข Badge แจ้งเตือนทันที
+        if (typeof refreshBadgesImmediately === 'function') {
+          refreshBadgesImmediately();
+        }
 
         Swal.fire({
           icon: 'success',
@@ -1359,6 +1431,7 @@ function submitBookingForm(e) {
           openBookingDetailModal(res.data.booking.BookingID);
         });
 
+        // ล้างฟอร์มและคงค่าวันที่เดิมไว้
         document.getElementById('bookingForm').reset();
         document.getElementById('bkDate').value = payload.date;
         document.getElementById('availCheckDate').value = payload.date;
@@ -1373,14 +1446,20 @@ function submitBookingForm(e) {
         onBookingDateChanged();
         renderBookingLayoutCards();
       })
-    .catch(function(err) {
-      Swal.fire({ icon: 'error', title: 'บันทึกการจองไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
-    })
-    .finally(function() {
-      if (btn) btn.disabled = false;
-      setLoading(false);
-    });
-}
+      .catch(function(err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'บันทึกการจองไม่สำเร็จ',
+          text: err.message,
+          confirmButtonColor: '#0f4c81',
+          confirmButtonText: 'ตกลง'
+        });
+      })
+      .finally(function() {
+        if (btn) btn.disabled = false;
+        setLoading(false);
+      });
+  }
 /* ==========================================================================
  * Real-time Auto-Polling & Immediate Badge Refresh System
  * ======================================================================== */
