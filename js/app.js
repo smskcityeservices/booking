@@ -1165,31 +1165,118 @@ function loadDashboard() {
       }
 
       if (isPrivileged) {
-        var tbody = document.getElementById('dashPendingBody');
-        if (tbody) {
-          if (recentPending.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted);">ไม่มีรายการรออนุมัติในขณะนี้</td></tr>';
-          } else {
-            var html = '';
-            recentPending.forEach(function(b) {
-              html += '<tr>' +
-                '<td><strong>' + escapeHtml(b.BookingID) + '</strong></td>' +
-                '<td>' + escapeHtml(formatDisplayDateThai(b.Date)) + '<br><small>' + escapeHtml(b.StartTime) + '–' + escapeHtml(b.EndTime) + ' น.</small></td>' +
-                '<td>' + escapeHtml(b.RoomName) + '</td>' +
-                '<td>' + escapeHtml(b.Topic) + '</td>' +
-                '<td>' + escapeHtml(b.BookerName) + '<br><small style="color:var(--muted);">' + escapeHtml(b.Department) + '</small></td>' +
-                '<td>' + statusBadge(b.Status) + '</td>' +
-                '<td><button class="btn btn-outline btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-eye"></i></button></td>' +
-                '</tr>';
-            });
-            tbody.innerHTML = html;
+          var tbody = document.getElementById('dashPendingBody');
+          if (tbody) {
+            if (recentPending.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:16px;">ไม่มีรายการรออนุมัติในขณะนี้</td></tr>';
+            } else {
+              var html = '';
+              recentPending.forEach(function(b) {
+                var thaiDate = formatDisplayDateThai(b.Date);
+                html += '<tr>' +
+                  '<td><strong>' + escapeHtml(b.BookingID) + '</strong></td>' +
+                  '<td>' + escapeHtml(thaiDate) + '<br><small style="color:var(--muted);">' + escapeHtml(b.StartTime) + '–' + escapeHtml(b.EndTime) + ' น.</small></td>' +
+                  '<td>' + escapeHtml(b.RoomName) + '</td>' +
+                  '<td>' + escapeHtml(b.Topic) + '</td>' +
+                  '<td>' + escapeHtml(b.BookerName) + '<br><small style="color:var(--muted);">' + escapeHtml(b.Department) + '</small></td>' +
+                  '<td>' + statusBadge(b.Status) + '</td>' +
+                  '<td style="white-space:nowrap;">' +
+                    // ปุ่มกดอนุมัติ / ไม่อนุมัติ / ดูรายละเอียด จากหน้า Dashboard ได้ทันที
+                    '<button class="btn btn-success btn-sm" onclick="approveFromDashboard(\'' + escapeHtml(b.BookingID) + '\')" title="อนุมัติการจองทันที" style="margin-right:4px;"><i class="bi bi-check-lg"></i> อนุมัติ</button>' +
+                    '<button class="btn btn-danger btn-sm" onclick="rejectFromDashboard(\'' + escapeHtml(b.BookingID) + '\')" title="ไม่อนุมัติ" style="margin-right:4px;"><i class="bi bi-x-lg"></i> ไม่อนุมัติ</button>' +
+                    '<button class="btn btn-outline btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')" title="ดูรายละเอียดและผังห้อง"><i class="bi bi-eye"></i></button>' +
+                  '</td>' +
+                  '</tr>';
+              });
+              tbody.innerHTML = html;
+            }
           }
         }
-      }
     })
     .catch(function(err) { showToast(err.message, 'error'); });
 }
+/* ==========================================================================
+   * Quick Approval Actions Directly from Dashboard
+   * ======================================================================== */
+  function approveFromDashboard(bookingId) {
+    setLoading(true, 'กำลังบันทึกอนุมัติการจอง...');
+    callGas('updateBookingStatus', STATE.token, bookingId, 'อนุมัติ', '')
+      .then(function(res) {
+        Swal.fire({
+          icon: 'success',
+          title: 'อนุมัติการจองสำเร็จ!',
+          text: 'สร้างกิจกรรมใน Google Calendar และส่งอีเมลแจ้งผู้จองเรียบร้อยแล้ว',
+          confirmButtonColor: '#0f4c81',
+          timer: 2000,
+          timerProgressBar: true
+        });
+        // รีเฟรชข้อมูล Dashboard และตัวเลข Badge อัตโนมัติทันที
+        loadDashboard();
+        if (typeof refreshBadgesImmediately === 'function') {
+          refreshBadgesImmediately();
+        }
+      })
+      .catch(function(err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'ไม่สามารถอนุมัติได้',
+          text: err.message,
+          confirmButtonColor: '#0f4c81',
+          confirmButtonText: 'ตกลง'
+        });
+      })
+      .finally(function() {
+        setLoading(false);
+      });
+  }
 
+  function rejectFromDashboard(bookingId) {
+    Swal.fire({
+      title: 'ระบุเหตุผลที่ไม่อนุมัติ',
+      input: 'textarea',
+      inputPlaceholder: 'กรอกเหตุผลหรือคำชี้แจงเพิ่มเติมเพื่อให้ผู้จองทราบ (ส่งทางอีเมล)...',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ยืนยันไม่อนุมัติ',
+      cancelButtonText: 'ยกเลิก',
+      inputAttributes: {
+        'style': 'font-family: Sarabun, sans-serif; font-size: 14px;'
+      }
+    }).then(function(result) {
+      if (result.isConfirmed) {
+        setLoading(true, 'กำลังบันทึกข้อมูล...');
+        callGas('updateBookingStatus', STATE.token, bookingId, 'ไม่อนุมัติ', result.value || '')
+          .then(function(res) {
+            Swal.fire({
+              icon: 'success',
+              title: 'บันทึกสถานะไม่อนุมัติเรียบร้อย',
+              text: 'ระบบได้ส่งอีเมลแจ้งผลไปยังผู้จองแล้ว',
+              confirmButtonColor: '#0f4c81',
+              timer: 2000,
+              timerProgressBar: true
+            });
+            loadDashboard();
+            if (typeof refreshBadgesImmediately === 'function') {
+              refreshBadgesImmediately();
+            }
+          })
+          .catch(function(err) {
+            Swal.fire({
+              icon: 'error',
+              title: 'เกิดข้อผิดพลาด',
+              text: err.message,
+              confirmButtonColor: '#0f4c81',
+              confirmButtonText: 'ตกลง'
+            });
+          })
+          .finally(function() {
+            setLoading(false);
+          });
+      }
+    });
+  }
 function renderBarChart(canvasId, labels, data, label, color) {
   if (STATE.charts[canvasId]) STATE.charts[canvasId].destroy();
   var ctx = document.getElementById(canvasId);
