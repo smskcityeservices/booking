@@ -4,7 +4,8 @@
  * ระบบจองห้องประชุมออนไลน์ เทศบาลเมืองสมุทรสงคราม
  * ============================================================================
  */
-
+// ใส่ Google Client ID ที่ได้จาก Google Cloud Console
+var GOOGLE_CLIENT_ID = "472614838836-o1kpfn5eq3g7aooc6n52acfb4juejj4i.apps.googleusercontent.com";
 // [สำคัญ] นำ Web App URL (/exec) ที่ได้จากการ Deploy Google Apps Script มาวางที่นี่
 var GAS_API_URL = "https://script.google.com/macros/s/AKfycbzy19hiTKNEJ5ELB9s6ZaFx3eF6kfONlv3oH1TxMdU9oB6G2bROP-X-l-SYn_wGSjUcNQ/exec";
 
@@ -2754,7 +2755,77 @@ function removeUser(email) {
     }
   });
 }
+/* ==========================================================================
+ * Google Identity Services (GIS) Sign-In & Account Linking
+ * ======================================================================== */
+function initGoogleIdentityServices() {
+  if (typeof google === 'undefined' || !google.accounts || !GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.indexOf('http') === 0) {
+    return;
+  }
 
+  try {
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleSignInCallback,
+      auto_select: false,
+      cancel_on_tap_outside: true
+    });
+
+    var btnContainer = document.getElementById('googleSignInBtn');
+    if (btnContainer) {
+      google.accounts.id.renderButton(btnContainer, {
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'pill',
+        logo_alignment: 'left',
+        width: 320,
+        locale: 'th'
+      });
+    }
+  } catch (err) {}
+}
+
+function handleGoogleSignInCallback(response) {
+  if (!response || !response.credential) return;
+
+  setLoading(true, 'กำลังตรวจสอบบัญชี Google...');
+  callGas('loginWithGoogle', { idToken: response.credential })
+    .then(function(res) {
+      STATE.token = res.data.token;
+      sessionStorage.setItem('MRB_AUTH_TOKEN', STATE.token);
+      STATE.user = res.data.user;
+
+      closeModal('loginModal');
+      updateAuthUI();
+      startNotificationPolling();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'เข้าสู่ระบบสำเร็จ!',
+        text: 'ยินดีต้อนรับ ' + STATE.user.name,
+        confirmButtonColor: '#0f4c81',
+        timer: 2000,
+        timerProgressBar: true
+      });
+
+      if (document.getElementById('view-dashboard').classList.contains('active')) {
+        loadDashboard();
+      }
+    })
+    .catch(function(err) {
+      Swal.fire({
+        icon: err.code === 'PENDING_APPROVAL' ? 'info' : 'error',
+        title: err.code === 'PENDING_APPROVAL' ? 'รอการอนุมัติบัญชี' : 'เข้าสู่ระบบไม่สำเร็จ',
+        text: err.message,
+        confirmButtonColor: '#0f4c81',
+        confirmButtonText: 'ตกลง'
+      });
+    })
+    .finally(function() {
+      setLoading(false);
+    });
+}
 function loadAdminAudit() {
   callGas('getAuditLogs', STATE.token, 100)
     .then(function(res) {
