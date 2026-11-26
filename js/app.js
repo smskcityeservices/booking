@@ -195,9 +195,14 @@ function openModal(id) {
 }
 
 function closeModal(id) {
-  var el = document.getElementById(id);
-  if (el) el.classList.remove('show');
-}
+    var el = document.getElementById(id);
+    if (el) {
+      el.classList.remove('show');
+      // ลบเงาที่อาจค้างอยู่
+      var backdrop = document.querySelector('.modal-backdrop.show');
+      if (backdrop) backdrop.style.display = 'none';
+    }
+  }
 
 function toggleSidebar(open) {
   var sb = document.getElementById('sidebar');
