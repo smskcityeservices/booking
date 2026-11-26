@@ -2904,65 +2904,61 @@ function initGoogleIdentityServices() {
 }
 
 function handleGoogleSignInCallback(response) {
-  if (!response || !response.credential) return;
+    if (!response || !response.credential) return;
 
-  setLoading(true, 'กำลังตรวจสอบบัญชี Google...');
-  callGas('loginWithGoogle', { idToken: response.credential })
-    .then(function(res) {
-      // กรณีเป็นสมาชิกใหม่ ต้องเด้งฟอร์มบังคับกรอก กอง/สำนัก และเบอร์โทร
-      if (res.data && res.data.needRegistration) {
-        setLoading(false);
-        var gp = res.data.googleProfile;
-        document.getElementById('gRegEmail').value = gp.email;
-        document.getElementById('gRegName').value = gp.name;
-        document.getElementById('gRegGoogleSub').value = gp.googleSub;
+    setLoading(true, 'กำลังตรวจสอบบัญชี Google...');
+    callGas('loginWithGoogle', { idToken: response.credential })
+      .then(function(res) {
+        // หากเป็นสมาชิกใหม่ ให้เด้งฟอร์มลงทะเบียน
+        if (res.data && res.data.needRegistration) {
+          setLoading(false); // ปิด Loading ก่อนเปิด Modal
+          
+          var gp = res.data.googleProfile;
+          document.getElementById('gRegEmail').value = gp.email;
+          document.getElementById('gRegName').value = gp.name;
+          document.getElementById('gRegGoogleSub').value = gp.googleSub;
 
-        // เติม Dropdown กอง/สำนักใน Modal ลงทะเบียน Google
-        var deptSel = document.getElementById('gRegDept');
-        if (deptSel) {
-          deptSel.innerHTML = '<option value="">-- เลือกกอง/สำนัก --</option>' + 
-            STATE.departments.map(function(d){ return '<option value="'+escapeHtml(d)+'">'+escapeHtml(d)+'</option>'; }).join('');
+          // เติม Dropdown กอง/สำนัก
+          var deptSel = document.getElementById('gRegDept');
+          if (deptSel) {
+            deptSel.innerHTML = '<option value="">-- เลือกกอง/สำนัก --</option>' + 
+              STATE.departments.map(function(d){ return '<option value="'+escapeHtml(d)+'">'+escapeHtml(d)+'</option>'; }).join('');
+          }
+
+          // 🛑 หัวใจสำคัญ: ปิด Modal เก่า แล้วหน่วงเวลาเล็กน้อยก่อนเปิด Modal ใหม่
+          closeModal('loginModal');
+          setTimeout(function() {
+            openModal('googleRegModal');
+          }, 400); // รอ 0.4 วินาทีเพื่อให้ Modal เก่าปิดสนิท
+          return;
         }
 
+        // กรณีเป็นสมาชิกเดิมที่อนุมัติแล้ว
+        STATE.token = res.data.token;
+        sessionStorage.setItem('MRB_AUTH_TOKEN', STATE.token);
+        STATE.user = res.data.user;
+
         closeModal('loginModal');
-        openModal('googleRegModal');
-        return;
-      }
+        updateAuthUI();
+        startNotificationPolling();
 
-      // กรณีเป็นสมาชิกเดิมที่อนุมัติแล้ว เข้าสู่ระบบปกติ
-      STATE.token = res.data.token;
-      sessionStorage.setItem('MRB_AUTH_TOKEN', STATE.token);
-      STATE.user = res.data.user;
-
-      closeModal('loginModal');
-      updateAuthUI();
-      startNotificationPolling();
-
-      Swal.fire({
-        icon: 'success',
-        title: 'เข้าสู่ระบบสำเร็จ!',
-        text: 'ยินดีต้อนรับ ' + STATE.user.name,
-        confirmButtonColor: '#0f4c81',
-        timer: 2000,
-        timerProgressBar: true
-      });
-
-      if (document.getElementById('view-dashboard').classList.contains('active')) {
+        Swal.fire({
+          icon: 'success',
+          title: 'เข้าสู่ระบบสำเร็จ!',
+          text: 'ยินดีต้อนรับ ' + STATE.user.name,
+          confirmButtonColor: '#0f4c81',
+          timer: 2000,
+          timerProgressBar: true
+        });
         loadDashboard();
-      }
-    })
-    .catch(function(err) {
-      Swal.fire({
-        icon: 'error',
-        title: 'เข้าสู่ระบบไม่สำเร็จ',
-        text: err.message,
-        confirmButtonColor: '#0f4c81'
+      })
+      .catch(function(err) {
+        Swal.fire({ icon: 'error', title: 'เข้าสู่ระบบไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
+      })
+      .finally(function() {
+        setLoading(false);
       });
-    })
-    .finally(function() {
-      setLoading(false);
-    });
-}
+  }
 
 // ฟังก์ชันกดส่งข้อมูลลงทะเบียนเพิ่มเติมของ Google Account
 function submitGoogleRegistration(e) {
