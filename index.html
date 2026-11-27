@@ -460,6 +460,30 @@
             <div class="tab-panel" id="admin-tab-audit"><div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>ผู้ดำเนินการ</th><th>สิทธิ์</th><th>กิจกรรม</th><th>เป้าหมาย</th><th>รายละเอียด</th></tr></thead><tbody id="adminAuditBody"></tbody></table></div></div>
           </div>
         </section>
+        <!-- ==========================================================
+     KIOSK VIEW (หน้าจอแสดงผลสถานะห้องหน้าห้องประชุม / จอใหญ่)
+     ========================================================== -->
+<div id="view-kiosk" class="app-view" style="padding: 20px; background: #0f172a; min-height: 100vh; color: #fff;">
+  <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-bottom: 25px;">
+    <div>
+      <h1 id="kioskOrgName" style="font-size: 24px; font-weight: 700; margin: 0; color: #38bdf8;">เทศบาลเมืองสมุทรสงคราม</h1>
+      <p style="font-size: 14px; color: #94a3b8; margin: 4px 0 0 0;"><i class="bi bi-display"></i> ระบบแสดงสถานะห้องประชุมออนไลน์ (Kiosk Mode)</p>
+    </div>
+    <div style="text-align: right;">
+      <div id="kioskClock" style="font-size: 28px; font-weight: 700; font-family: monospace; color: #f8fafc;">00:00:00</div>
+      <div id="kioskDate" style="font-size: 14px; color: #cbd5e1;">-</div>
+    </div>
+  </div>
+
+  <!-- Grid แสดงห้องประชุมทั้งหมด -->
+  <div id="kioskRoomGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 20px;">
+    <!-- Render by JS -->
+  </div>
+
+  <div style="margin-top: 30px; text-align: center; color: #64748b; font-size: 13px;">
+    ระบบอัปเดตข้อมูลอัตโนมัติทุกๆ 30 วินาที &bull; กดปุ่ม <a href="index.html?page=dashboard" style="color: #38bdf8; text-decoration: none;">[กลับสู่หน้าหลักระบบ]</a>
+  </div>
+</div>
       </main>
     </div>
   </div>
