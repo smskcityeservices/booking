@@ -1050,11 +1050,17 @@ function checkBookerStatusUpdates(bookingsList) {
   var hasNewRejection = false;
   var approvedBooking = null;
   var rejectedBooking = null;
+  var statusChanged = false; // 🟢 ตัวแปรเช็กว่ามีการเปลี่ยนแปลงสถานะหรือไม่
 
   bookingsList.forEach(function(b) {
     var id = b.BookingID;
     var currentStatus = b.EffectiveStatus || b.Status;
     var prevStatus = knownStatuses[id];
+
+    // ถ้าในระบบเคยบันทึกสถานะไว้ และสถานะปัจจุบันเปลี่ยนไปจากเดิม
+    if (prevStatus && prevStatus !== currentStatus) {
+      statusChanged = true;
+    }
 
     if (prevStatus === 'รออนุมัติ') {
       if (currentStatus === 'อนุมัติ' && !hasNewApproval) {
@@ -1070,6 +1076,22 @@ function checkBookerStatusUpdates(bookingsList) {
 
   localStorage.setItem(storageKey, JSON.stringify(knownStatuses));
 
+  // 🟢 หากสถานะมีการเปลี่ยนแปลง และผู้ใช้อยู่หน้า "รายการจองของฉัน" ให้รีเฟรชตารางและ Badge ทันที
+  if (statusChanged) {
+    var myBookingsView = document.getElementById('view-mybookings');
+    if (myBookingsView && myBookingsView.classList.contains('active')) {
+      if (typeof loadMyBookings === 'function') {
+        loadMyBookings();
+      }
+    }
+    // อัปเดตตัวเลข Active Count บน Badge เมนูซ้าย
+    var activeCount = bookingsList.filter(function(x) {
+      var st = x.EffectiveStatus || x.Status;
+      return st === 'รออนุมัติ' || st === 'อนุมัติ';
+    }).length;
+    updateMyBookingsBadge(activeCount);
+  }
+
   if (hasNewApproval && approvedBooking) {
     Swal.fire({
       icon: 'success',
@@ -1078,6 +1100,8 @@ function checkBookerStatusUpdates(bookingsList) {
       confirmButtonColor: '#16a34a',
       confirmButtonText: '<i class="bi bi-qr-code"></i> ดูรายละเอียด & QR Code'
     }).then(function() {
+      // เมื่อกดปิด Pop-up หรือกดดูรายละเอียด ให้รีเฟรชตารางอีกรอบเพื่อความชัวร์
+      if (typeof loadMyBookings === 'function') loadMyBookings();
       openBookingDetailModal(approvedBooking.BookingID);
     });
   } else if (hasNewRejection && rejectedBooking) {
@@ -1087,10 +1111,11 @@ function checkBookerStatusUpdates(bookingsList) {
       html: 'รายการจอง <strong>' + escapeHtml(rejectedBooking.Topic) + '</strong> (' + escapeHtml(rejectedBooking.RoomName) + ')<br>วันที่ ' + formatDisplayDateThai(rejectedBooking.Date) + ' ไม่ผ่านการอนุมัติ กรุณาตรวจสอบหรือเลือกช่วงเวลาใหม่',
       confirmButtonColor: '#0f4c81',
       confirmButtonText: 'รับทราบ'
+    }).then(function() {
+      if (typeof loadMyBookings === 'function') loadMyBookings();
     });
   }
 }
-
 /* ==========================================================================
  * Dynamic Time Slot Generation & Real-time Availability Checking
  * ======================================================================== */
