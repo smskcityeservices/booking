@@ -158,6 +158,52 @@ function callGas(fnName) {
 /* ==========================================================================
  * SweetAlert2 & Utility Helpers
  * ======================================================================== */
+/**
+ * เปิดใช้งานปฏิทิน Flatpickr สไตล์ Modern รองรับภาษาไทยและปี พ.ศ.
+ */
+function initModernThaiCalendar(elementId, onSelectCallback) {
+  var el = document.getElementById(elementId);
+  if (!el || typeof flatpickr === 'undefined') return;
+
+  flatpickr(el, {
+    locale: 'th', // ใช้ภาษาไทย
+    dateFormat: 'Y-m-d', // ค่าเบื้องหลังเก็บเป็น ค.ศ. (YYYY-MM-DD) เพื่อส่งให้ระบบ Database
+    altInput: true, // เปิดใช้ช่องแสดงผลจำลอง
+    altFormat: 'j M Y', // รูปแบบการแสดงผล เช่น 27 พ.ย. 2569 (แปลง ค.ศ. เป็น พ.ศ. ด้านล่าง)
+    minDate: 'today',
+    disableMobile: "true", // บังคับใช้ปฏิทินสวยงามของเว็บแทนปฏิทินมือถือเดิม
+    onChange: function(selectedDates, dateStr, instance) {
+      // แปลงปี ค.ศ. บนช่องแสดงผลเป็นปี พ.ศ. อัตโนมัติทันที
+      if (instance.altInput) {
+        var val = instance.altInput.value;
+        var parts = val.split(' ');
+        if (parts.length === 3) {
+          var y = parseInt(parts[2], 10);
+          if (y && y < 2400) {
+            parts[2] = y + 543;
+            instance.altInput.value = parts.join(' ');
+          }
+        }
+      }
+      if (typeof onSelectCallback === 'function') {
+        onSelectCallback(dateStr);
+      }
+    },
+    onReady: function(selectedDates, dateStr, instance) {
+      if (instance.altInput) {
+        var val = instance.altInput.value;
+        var parts = val.split(' ');
+        if (parts.length === 3) {
+          var y = parseInt(parts[2], 10);
+          if (y && y < 2400) {
+            parts[2] = y + 543;
+            instance.altInput.value = parts.join(' ');
+          }
+        }
+      }
+    }
+  });
+}
 function showToast(msg, type) {
   type = type || 'info';
   var iconMap = { 'success': 'success', 'error': 'error', 'warning': 'warning', 'info': 'info' };
@@ -314,6 +360,9 @@ document.addEventListener('DOMContentLoaded', function() {
 /**
  * เริ่มต้นระบบและโหลดข้อมูลตั้งต้นทั้งหมดเข้าสู่แอปพลิเคชัน
  */
+/**
+ * เริ่มต้นระบบและโหลดข้อมูลตั้งต้นทั้งหมดเข้าสู่แอปพลิเคชัน
+ */
 function bootstrapApp() {
   setLoading(true, 'กำลังเชื่อมต่อข้อมูลระบบ...');
 
@@ -352,16 +401,23 @@ function bootstrapApp() {
         }
       });
 
-      // 5. เปิดใช้งาน jQuery UI Datepicker แบบภาษาไทยและปี พ.ศ. (ถ้ามีฟังก์ชันรองรับ)
-      if (typeof initThaiDatePicker === 'function') {
-        initThaiDatePicker('availCheckDate', function(selectedDate) {
+      // 5. เปิดใช้งานปฏิทิน Flatpickr สไตล์ Modern (ภาษาไทยและปี พ.ศ.)
+      if (typeof initModernThaiCalendar === 'function') {
+        initModernThaiCalendar('availCheckDate', function(selectedDate) {
           var bkD = document.getElementById('bkDate');
-          if (bkD) bkD.value = selectedDate;
+          if (bkD) {
+            bkD.value = selectedDate;
+            if (bkD._flatpickr) bkD._flatpickr.setDate(selectedDate, true);
+          }
           onBookingDateChanged();
         });
-        initThaiDatePicker('bkDate', function(selectedDate) {
+
+        initModernThaiCalendar('bkDate', function(selectedDate) {
           var availD = document.getElementById('availCheckDate');
-          if (availD) availD.value = selectedDate;
+          if (availD) {
+            availD.value = selectedDate;
+            if (availD._flatpickr) availD._flatpickr.setDate(selectedDate, true);
+          }
           syncDateFromForm();
         });
       }
