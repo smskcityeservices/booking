@@ -610,37 +610,48 @@ function navigateTo(view) {
     return;
   }
 
-  // จัดการซ่อน/แสดง องค์ประกอบหลักของเว็บเมื่อเข้าสู่ Kiosk Mode
   var isKiosk = (view === 'kiosk');
-  var mainHeader = document.querySelector('header'); // หรือ wrapper แถบบนของท่าน
-  var sidebarEl = document.getElementById('sidebar');
+  
+  // 🟢 ค้นหา Layout หลักของเว็บเพื่อซ่อนเมื่ออยู่โหมด Kiosk
+  var sidebar = document.getElementById('sidebar');
   var sidebarOverlay = document.getElementById('sidebarOverlay');
-  var appContentWrap = document.querySelector('.app-content-wrapper') || document.getElementById('appContentWrap');
+  var mainHeaderBar = document.querySelector('.app-header') || document.querySelector('header');
+  var mainLayoutContent = document.querySelector('.app-main') || document.querySelector('.main-content');
 
   if (isKiosk) {
-    // ปิดการทำงาน Polling ปกติ เพื่อไม่ให้เปลือง Request และเปิดใช้ Kiosk Timer แทน
     stopNotificationPolling();
     startKioskMode();
     
-    // ซ่อนเมนูและแถบบนเพื่อให้จอโล่งเต็มตาสำหรับติดหน้าห้อง
-    if (sidebarEl) sidebarEl.style.display = 'none';
+    // ซ่อนเลย์เอาต์หลักทั้งหมด
+    if (sidebar) sidebar.style.display = 'none';
     if (sidebarOverlay) sidebarOverlay.style.display = 'none';
+    if (mainHeaderBar) mainHeaderBar.style.display = 'none';
+    if (mainLayoutContent) mainLayoutContent.style.marginLeft = '0';
   } else {
-    // ถ้าออกจากหน้า Kiosk ให้หยุดระบบ Kiosk และเปิด Sidebar กลับมาตามเดิม
     stopKioskMode();
-    if (sidebarEl) sidebarEl.style.display = '';
-    if (sidebarOverlay) sidebarOverlay.style.display = '';
     
-    // หากผู้ใช้ Login อยู่ ให้เปิด Polling แจ้งเตือนตามปกติ
+    // คืนค่าเลย์เอาต์หลักกลับมา
+    if (sidebar) sidebar.style.display = '';
+    if (sidebarOverlay) sidebarOverlay.style.display = '';
+    if (mainHeaderBar) mainHeaderBar.style.display = '';
+    if (mainLayoutContent) mainLayoutContent.style.marginLeft = '';
+
     if (STATE.user && STATE.user.authenticated) {
       startNotificationPolling();
     }
   }
 
   var views = document.querySelectorAll('.app-view');
-  views.forEach(function(v) { v.classList.remove('active'); });
+  views.forEach(function(v) { 
+    v.classList.remove('active'); 
+    if(v.id === 'view-kiosk') v.style.display = 'none'; // ซ่อน view อื่นๆ รวมทั้ง kiosk ถ้าไม่ได้เรียก
+  });
+
   var target = document.getElementById('view-' + view);
-  if (target) target.classList.add('active');
+  if (target) {
+    target.classList.add('active');
+    if (isKiosk) target.style.display = 'block'; // แสดงผล Kiosk แบบเต็มจอ
+  }
 
   var btns = document.querySelectorAll('.nav-item, .mobile-bottom-btn');
   btns.forEach(function(b) {
@@ -671,7 +682,7 @@ function navigateTo(view) {
   else if (view === 'mybookings') loadMyBookings();
   else if (view === 'stats') runBookingSearch();
   else if (view === 'admin') loadAdminView();
-  else if (view === 'kiosk') loadKioskData(); // โหลดข้อมูลหน้าจอ Kiosk ทันที
+  else if (view === 'kiosk') loadKioskData();
 }
 function startKioskMode() {
   // ซ่อนเมนูนำทางด้านข้างหากต้องการให้เต็มจอ
