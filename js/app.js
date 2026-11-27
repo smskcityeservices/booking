@@ -1333,37 +1333,54 @@ function performLiveAvailabilityCheck() {
   if (!banner) return;
 
   if (!roomId || !date || !startTime || !endTime) { banner.innerHTML = ''; return; }
+  
   if (timeToMinutes(startTime) >= timeToMinutes(endTime)) {
-    banner.innerHTML = '<div class="live-avail-banner busy"><i class="bi bi-exclamation-circle-fill" style="font-size:18px;"></i> <div>เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด</div></div>';
+    banner.innerHTML = '<div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 5px solid #dc2626; padding: 14px 18px; border-radius: 10px; color: #991b1b; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">' +
+      '<i class="bi bi-exclamation-triangle-fill" style="font-size: 22px; color: #dc2626;"></i>' +
+      '<div style="font-size: 14px; font-weight: 600;">เวลาเริ่มต้นต้องน้อยกว่าเวลาสิ้นสุด</div></div>';
     return;
   }
 
-  banner.innerHTML = '<div class="live-avail-banner checking"><i class="bi bi-arrow-repeat spin" style="font-size:18px;"></i> <div>กำลังตรวจสอบตารางการใช้ห้อง...</div></div>';
+  banner.innerHTML = '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 5px solid #0284c7; padding: 14px 18px; border-radius: 10px; color: #475569; display: flex; align-items: center; gap: 12px;">' +
+    '<i class="bi bi-arrow-repeat spin" style="font-size: 22px; color: #0284c7;"></i>' +
+    '<div style="font-size: 14px; font-weight: 600;">กำลังตรวจสอบตารางการใช้ห้องประชุมแบบ Real-time...</div></div>';
 
   callGas('checkRoomAvailability', { roomId: roomId, date: date, startTime: startTime, endTime: endTime })
     .then(function(res) {
       var avail = res.data;
       if (avail.available) {
-        banner.innerHTML = '<div class="live-avail-banner available">' +
-          '<i class="bi bi-check-circle-fill" style="font-size:20px; color:#16a34a; flex-shrink:0;"></i>' +
-          '<div><strong>ห้องว่าง พร้อมจอง!</strong> ในช่วงเวลา ' + startTime + ' - ' + endTime + ' น.</div></div>';
+        // ดีไซน์กล่อง "ห้องว่าง พร้อมจอง" แบบ Modern พรีเมียม
+        banner.innerHTML = '<div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-left: 5px solid #16a34a; padding: 16px 20px; border-radius: 12px; color: #166534; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.1);">' +
+          '<div style="background: #16a34a; color: #fff; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;"><i class="bi bi-check-lg"></i></div>' +
+          '<div>' +
+            '<div style="font-size: 15px; font-weight: 700; color: #14532d;">ห้องว่าง พร้อมจองใช้งาน!</div>' +
+            '<div style="font-size: 13.5px; color: #166534; margin-top: 2px;">ในช่วงเวลา <strong>' + startTime + ' - ' + endTime + ' น.</strong> สามารถดำเนินการจองต่อได้ทันที</div>' +
+          '</div></div>';
       } else {
-        var html = '<div class="live-avail-banner busy">' +
-          '<i class="bi bi-x-circle-fill" style="font-size:20px; color:#dc2626; flex-shrink:0;"></i>' +
-          '<div style="width:100%;"><strong>ไม่สามารถจองได้:</strong> ห้องนี้มีการจองแล้วในช่วงเวลาดังกล่าว';
+        // ดีไซน์กล่อง "ไม่ว่าง / ชนเวลากับผู้อื่น" พร้อมช่วงเวลาแนะนำที่สวยงามขึ้น
+        var html = '<div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-left: 5px solid #dc2626; padding: 16px 20px; border-radius: 12px; color: #991b1b; box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.1);">' +
+          '<div style="display: flex; align-items: flex-start; gap: 14px;">' +
+            '<div style="background: #dc2626; color: #fff; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;"><i class="bi bi-x-lg"></i></div>' +
+            '<div style="width: 100%;">' +
+              '<div style="font-size: 15px; font-weight: 700; color: #7f1d1d;">ไม่สามารถจองได้ เนื่องจากห้องถูกใช้งานในช่วงเวลานี้แล้ว</div>' +
+              '<div style="font-size: 13px; color: #b91c1c; margin-top: 2px;">กรุณาเลือกช่วงเวลาอื่น หรือพิจารณาเลือกช่วงเวลาว่างใกล้เคียงด้านล่าง:</div>';
+        
         if (avail.suggestedSlots && avail.suggestedSlots.length > 0) {
-          html += '<div style="margin-top:6px;">ช่วงเวลาที่ว่างใกล้เคียง (คลิกเพื่อเลือก):<br>';
+          html += '<div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">';
           avail.suggestedSlots.forEach(function(s) {
-            html += '<span class="slot-chip" onclick="applyTimePreset(\'' + s.startTime + '\',\'' + s.endTime + '\')"><i class="bi bi-clock"></i> ' + s.startTime + ' - ' + s.endTime + ' น.</span>';
+            html += '<button type="button" class="btn btn-sm" style="background: #fff; border: 1px solid #fca5a5; color: #991b1b; font-weight: 600; font-size: 12.5px; padding: 6px 12px; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer;" onclick="applyTimePreset(\'' + s.startTime + '\',\'' + s.endTime + '\')">' +
+              '<i class="bi bi-clock-history"></i> ' + s.startTime + ' - ' + s.endTime + ' น.' +
+            '</button>';
           });
           html += '</div>';
         }
-        html += '</div></div>';
+        
+        html += '</div></div></div>';
         banner.innerHTML = html;
       }
     })
     .catch(function(err) {
-      banner.innerHTML = '<div class="live-avail-banner busy">ไม่สามารถตรวจสอบสถานะได้: ' + escapeHtml(err.message) + '</div>';
+      banner.innerHTML = '<div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 5px solid #dc2626; padding: 14px 18px; border-radius: 10px; color: #991b1b; font-weight: 600;">ไม่สามารถตรวจสอบสถานะได้: ' + escapeHtml(err.message) + '</div>';
     });
 }
 
