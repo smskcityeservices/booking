@@ -294,7 +294,11 @@
           <div class="card">
             <div class="card-header">
               <div class="card-title"><i class="bi bi-calendar2-check"></i> 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน</div>
-              <div style="display:flex; align-items:center; gap:8px;"><label for="availCheckDate" style="margin:0;">วันที่ใช้งาน:</label><input type="date" id="availCheckDate" style="width:auto;" onchange="onBookingDateChanged()"></div>
+              <div style="display:flex; align-items:center; gap:8px;">
+        <label for="availCheckDate" style="margin:0; font-size:14px; font-weight:600;">วันที่ใช้งาน:</label>
+        <!-- ช่อง input วันที่ใช้งานแบบแปลงเป็น พ.ศ. อัตโนมัติ -->
+        <input type="date" id="availCheckDate" style="width:auto; font-weight:600;" onchange="onBookingDateChanged()">
+      </div>
             </div>
             <div class="avail-list" id="roomAvailCards"></div>
           </div>
