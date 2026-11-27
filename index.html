@@ -314,48 +314,103 @@
 
         <!-- View: Stats & Search -->
         <section class="app-view" id="view-stats">
-          <div class="card">
-            <div class="card-header"><div class="card-title"><i class="bi bi-search"></i> ค้นหารายการจองห้องประชุมทั้งหมด</div></div>
-            <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); margin-bottom:14px;">
-              <div class="form-group"><label>คำค้นหา</label><input type="text" id="searchQuery" placeholder="รหัส / ผู้จอง / หัวข้อ"></div>
-              <div class="form-group"><label>ห้องประชุม</label><select id="searchRoom"><option value="">ทั้งหมด</option></select></div>
-              <div class="form-group"><label>วันที่ใช้งาน</label><input type="date" id="searchDate"></div>
-              <div class="form-group"><label>สถานะ</label><select id="searchStatus"><option value="">ทั้งหมด</option><option value="รออนุมัติ">รออนุมัติ</option><option value="อนุมัติ">อนุมัติ</option><option value="ไม่อนุมัติ">ไม่อนุมัติ</option><option value="ยกเลิก">ยกเลิก</option><option value="เสร็จสิ้น">เสร็จสิ้น</option></select></div>
+          <div class="card mb-4" style="background:#fff; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div class="card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
+              <div class="card-title" style="font-size:16px; font-weight:700; color:#0f4c81;">
+                <i class="bi bi-search"></i> ค้นหารายการจองห้องประชุมทั้งหมด
+              </div>
             </div>
-            <div style="display:flex; gap:10px; margin-bottom:14px;"><button class="btn btn-primary" onclick="runBookingSearch()"><i class="bi bi-search"></i> ค้นหา</button><button class="btn btn-light" onclick="resetBookingSearch()"><i class="bi bi-eraser"></i> ล้างตัวกรอง</button></div>
-            <div class="table-wrap"><table><thead><tr><th>รหัสจอง</th><th>วันที่</th><th>เวลา</th><th>ห้องประชุม</th><th>หัวข้อ</th><th>ผู้จอง / หน่วยงาน</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="searchResultBody"></tbody></table></div>
+            
+            <div class="form-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:16px;">
+              <div class="form-group">
+                <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">คำค้นหา</label>
+                <input type="text" id="searchQuery" class="form-control" placeholder="รหัส / ผู้จอง / หัวข้อ">
+              </div>
+              
+              <div class="form-group">
+                <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">ห้องประชุม</label>
+                <select id="searchRoom" class="form-control"><option value="">ทั้งหมด</option></select>
+              </div>
+              
+              <!-- ช่องวันที่ใช้งาน ปรับปรุงรองรับ Flatpickr สไตล์ Modern (ภาษาไทย / พ.ศ.) -->
+              <div class="form-group">
+                <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">วันที่ใช้งาน</label>
+                <input type="text" id="searchDate" class="form-control" placeholder="-- ทุกวันที่ --" readonly style="background:#fff; cursor:pointer;">
+              </div>
+              
+              <div class="form-group">
+                <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">สถานะ</label>
+                <select id="searchStatus" class="form-control">
+                  <option value="">ทั้งหมด</option>
+                  <option value="รออนุมัติ">รออนุมัติ</option>
+                  <option value="อนุมัติ">อนุมัติ</option>
+                  <option value="ไม่อนุมัติ">ไม่อนุมัติ</option>
+                  <option value="ยกเลิก">ยกเลิก</option>
+                  <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+              <button class="btn btn-primary" onclick="runBookingSearch()"><i class="bi bi-search"></i> ค้นหา</button>
+              <button class="btn btn-light" onclick="resetBookingSearch()"><i class="bi bi-eraser"></i> ล้างตัวกรอง</button>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>รหัสจอง</th>
+                    <th>วันที่</th>
+                    <th>เวลา</th>
+                    <th>ห้องประชุม</th>
+                    <th>หัวข้อ</th>
+                    <th>ผู้จอง / หน่วยงาน</th>
+                    <th>สถานะ</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="searchResultBody"></tbody>
+              </table>
+            </div>
           </div>
-          <div class="card"><div class="card-header"><div class="card-title"><i class="bi bi-pie-chart"></i> สัดส่วนสถานะการจองทั้งหมด</div></div><div style="max-width:420px; margin:0 auto;"><canvas id="chartByStatus" height="220"></canvas></div></div>
+
+          <div class="card" style="background:#fff; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div class="card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
+              <div class="card-title" style="font-size:16px; font-weight:700; color:#0f4c81;">
+                <i class="bi bi-pie-chart"></i> สัดส่วนสถานะการจองทั้งหมด
+              </div>
+            </div>
+            <div style="max-width:420px; margin:0 auto; position:relative;">
+              <canvas id="chartByStatus" height="220"></canvas>
+            </div>
+          </div>
         </section>
 
         <!-- View: Booking -->
         <section class="app-view" id="view-booking">
-  <!-- โครงสร้างส่วนตรวจสอบสถานะห้องว่างอัตโนมัติ (ปรับใหม่ให้อยู่ขวาสุด) -->
-<div class="card mb-4" style="padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
-    <div style="font-weight: 700; font-size: 16px; color: #0f4c81;">
-      <i class="bi bi-calendar-check"></i> 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน
-    </div>
-    
-    <!-- ช่องเลือกวันที่วางไว้ขวาสุด ออกแบบเป็นการ์ดเลือกวัน -->
-    <div style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-      <label for="availCheckDate" style="font-size: 13.5px; font-weight: 600; color: #475569; margin: 0; white-space: nowrap;">
-        <i class="bi bi-calendar3"></i> วันที่ใช้งาน:
-      </label>
-      <input type="text" id="availCheckDate" class="form-control" style="background: #fff; cursor: pointer; width: 140px; text-align: center; font-weight: 600;" placeholder="-- เลือกวันที่ --" readonly>
-    </div>
-  </div>
+          <!-- โครงสร้างส่วนตรวจสอบสถานะห้องว่างอัตโนมัติ (จัดวางวันที่ชิดขวาสุดอย่างสวยงาม) -->
+          <div class="card mb-4" style="padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+              <div style="font-weight: 700; font-size: 16px; color: #0f4c81;">
+                <i class="bi bi-calendar-check"></i> 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน
+              </div>
+              
+              <!-- ช่องเลือกวันที่วางไว้ขวาสุด ออกแบบเป็นการ์ดเลือกวัน -->
+              <div style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <label for="availCheckDate" style="font-size: 13.5px; font-weight: 600; color: #475569; margin: 0; white-space: nowrap;">
+                  <i class="bi bi-calendar3"></i> วันที่ใช้งาน:
+                </label>
+                <input type="text" id="availCheckDate" class="form-control" style="background: #fff; cursor: pointer; width: 140px; text-align: center; font-weight: 600;" placeholder="-- เลือกวันที่ --" readonly>
+              </div>
+            </div>
 
-  <!-- แถวแสดงการ์ดห้องว่างรายวัน -->
-  <div id="roomAvailCards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
-    <!-- เรนเดอร์การ์ดห้องว่างโดย JavaScript -->
-  </div>
-</div>
-    </div>
-    <div class="avail-list" id="roomAvailCards">
-      <div style="color:var(--muted); padding:10px 0;">กำลังโหลดสถานะห้องประชุม...</div>
-    </div>
-  </div>
+            <!-- แถวแสดงการ์ดห้องว่างรายวัน -->
+            <div id="roomAvailCards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+              <div style="color:var(--muted); padding:10px 0;">กำลังโหลดสถานะห้องประชุม...</div>
+            </div>
+          </div>
+        </section>
           
           <div class="card">
             <div class="card-header"><div class="card-title"><i class="bi bi-pencil-square"></i> 2. กรอกข้อมูลการจองและกำหนดรูปแบบห้องประชุม</div></div>
