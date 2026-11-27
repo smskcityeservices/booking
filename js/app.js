@@ -580,7 +580,11 @@ function populateDropdowns() {
     if (el) el.innerHTML = filterOpts;
   });
 }
-
+var kioskTimer = null;
+var kioskClockTimer = null;
+/* ==========================================================================
+ * Navigation (ปรับปรุงล่าสุด รองรับ Kiosk Mode)
+ * ======================================================================== */
 function navigateTo(view) {
   var restrictedViews = ['calendar', 'mybookings', 'stats', 'booking'];
   if (restrictedViews.indexOf(view) !== -1 && !STATE.user.authenticated) {
@@ -606,6 +610,33 @@ function navigateTo(view) {
     return;
   }
 
+  // จัดการซ่อน/แสดง องค์ประกอบหลักของเว็บเมื่อเข้าสู่ Kiosk Mode
+  var isKiosk = (view === 'kiosk');
+  var mainHeader = document.querySelector('header'); // หรือ wrapper แถบบนของท่าน
+  var sidebarEl = document.getElementById('sidebar');
+  var sidebarOverlay = document.getElementById('sidebarOverlay');
+  var appContentWrap = document.querySelector('.app-content-wrapper') || document.getElementById('appContentWrap');
+
+  if (isKiosk) {
+    // ปิดการทำงาน Polling ปกติ เพื่อไม่ให้เปลือง Request และเปิดใช้ Kiosk Timer แทน
+    stopNotificationPolling();
+    startKioskMode();
+    
+    // ซ่อนเมนูและแถบบนเพื่อให้จอโล่งเต็มตาสำหรับติดหน้าห้อง
+    if (sidebarEl) sidebarEl.style.display = 'none';
+    if (sidebarOverlay) sidebarOverlay.style.display = 'none';
+  } else {
+    // ถ้าออกจากหน้า Kiosk ให้หยุดระบบ Kiosk และเปิด Sidebar กลับมาตามเดิม
+    stopKioskMode();
+    if (sidebarEl) sidebarEl.style.display = '';
+    if (sidebarOverlay) sidebarOverlay.style.display = '';
+    
+    // หากผู้ใช้ Login อยู่ ให้เปิด Polling แจ้งเตือนตามปกติ
+    if (STATE.user && STATE.user.authenticated) {
+      startNotificationPolling();
+    }
+  }
+
   var views = document.querySelectorAll('.app-view');
   views.forEach(function(v) { v.classList.remove('active'); });
   var target = document.getElementById('view-' + view);
@@ -624,7 +655,8 @@ function navigateTo(view) {
     rooms: 'ข้อมูลห้องประชุมทั้งหมด',
     mybookings: 'รายการจองของฉัน',
     stats: 'สถิติและค้นหารายการจอง',
-    admin: 'จัดการระบบและอนุมัติการจอง'
+    admin: 'จัดการระบบและอนุมัติการจอง',
+    kiosk: 'ระบบแสดงสถานะห้องประชุมหน้าห้อง (Kiosk)'
   };
   var pageTitle = document.getElementById('pageTitle');
   if (pageTitle) pageTitle.textContent = titles[view] || 'ระบบจองห้องประชุม';
@@ -639,8 +671,113 @@ function navigateTo(view) {
   else if (view === 'mybookings') loadMyBookings();
   else if (view === 'stats') runBookingSearch();
   else if (view === 'admin') loadAdminView();
+  else if (view === 'kiosk') loadKioskData(); // โหลดข้อมูลหน้าจอ Kiosk ทันที
+}
+function startKioskMode() {
+  // ซ่อนเมนูนำทางด้านข้างหากต้องการให้เต็มจอ
+  var sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.style.display = 'none';
+  
+  loadKioskData();
+  
+  // อัปเดตข้อมูลทุก 30 วินาที
+  if (!kioskTimer) {
+    kioskTimer = setInterval(loadKioskData, 30000);
+  }
+  
+  // อัปเดตนาฬิกาทุก 1 วินาที
+  if (!kioskClockTimer) {
+    kioskClockTimer = setInterval(updateKioskClock, 1000);
+  }
 }
 
+function stopKioskMode() {
+  if (kioskTimer) {
+    clearInterval(kioskTimer);
+    kioskTimer = null;
+  }
+  if (kioskClockTimer) {
+    clearInterval(kioskClockTimer);
+    kioskClockTimer = null;
+  }
+  var sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.style.display = '';
+}
+
+function updateKioskClock() {
+  var now = new Date();
+  var clockEl = document.getElementById('kioskClock');
+  var dateEl = document.getElementById('kioskDate');
+  if (clockEl) clockEl.textContent = now.toTimeString().split(' ')[0];
+  if (dateEl) dateEl.textContent = formatDisplayDateThai(todayIso());
+}
+
+function loadKioskData() {
+  callGas('getKioskRoomStatus')
+    .then(function(res) {
+      var data = res.data;
+      var grid = document.getElementById('kioskRoomGrid');
+      if (!grid) return;
+
+      var html = '';
+      data.rooms.forEach(function(r) {
+        var isBusy = (r.status === 'BUSY');
+        var isMaint = (r.status === 'MAINTENANCE');
+        
+        var cardBg = isBusy ? '#7f1d1d' : (isMaint ? '#475569' : '#065f46');
+        var statusText = isBusy ? 'กำลังใช้งาน (BUSY)' : (isMaint ? 'ปิดปรับปรุง' : 'ห้องว่าง (AVAILABLE)');
+        var statusDot = isBusy ? '🔴' : (isMaint ? '🟡' : '🟢');
+
+        html += '<div style="background: #1e293b; border: 2px solid ' + (isBusy ? '#ef4444' : (isMaint ? '#94a3b8' : '#10b981')) + '; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);">' +
+          // รูปภาพและป้ายสถานะด้านบน
+          '<div style="position: relative; height: 160px; background: #334155;">' +
+            '<img src="' + escapeHtml(r.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800') + '" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.75;">' +
+            '<div style="position: absolute; top: 12px; right: 12px; background: ' + cardBg + '; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">' +
+              statusDot + ' ' + statusText +
+            '</div>' +
+            '<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(15,23,42,0.9), transparent); padding: 15px 15px 8px 15px;">' +
+              '<h3 style="margin: 0; font-size: 20px; color: #fff; font-weight: 700;">' + escapeHtml(r.roomName) + '</h3>' +
+              '<div style="font-size: 12.5px; color: #94a3b8;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.building) + ' ' + escapeHtml(r.floor) + ' &bull; ความจุ ' + r.capacity + ' คน</div>' +
+            '</div>' +
+          '</div>' +
+          // รายละเอียดการประชุมปัจจุบัน / ถัดไป
+          '<div style="padding: 16px;">';
+
+        if (isBusy && r.currentMeeting) {
+          var m = r.currentMeeting;
+          html += '<div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px;">' +
+            '<div style="font-size: 11px; color: #f87171; font-weight: 700; text-transform: uppercase;">กำลังประชุมขณะนี้</div>' +
+            '<div style="font-size: 15px; font-weight: 700; color: #fff; margin: 2px 0;">' + escapeHtml(m.Topic) + '</div>' +
+            '<div style="font-size: 12.5px; color: #cbd5e1;"><i class="bi bi-clock"></i> ' + escapeHtml(m.StartTime) + ' - ' + escapeHtml(m.EndTime) + ' น.</div>' +
+            '<div style="font-size: 12px; color: #94a3b8; margin-top: 4px;"><i class="bi bi-person"></i> ผู้จอง: ' + escapeHtml(m.BookerName) + ' (' + escapeHtml(m.Department) + ')</div>' +
+          '</div>';
+        } else {
+          html += '<div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 12px; border-radius: 0 8px 8px 0; margin-bottom: 12px; color: #34d399; font-weight: 600;">' +
+            '<i class="bi bi-check-circle"></i> ห้องว่างพร้อมใช้งานในขณะนี้' +
+          '</div>';
+        }
+
+        // แสดงการประชุมถัดไป (ถ้ามี)
+        if (r.nextMeeting) {
+          var nm = r.nextMeeting;
+          html += '<div style="font-size: 12px; color: #94a3b8; border-top: 1px dashed #334155; padding-top: 8px;">' +
+            '<strong>ถัดไป:</strong> ' + escapeHtml(nm.StartTime) + ' - ' + escapeHtml(nm.EndTime) + ' น. — ' + escapeHtml(nm.Topic) +
+          '</div>';
+        } else {
+          html += '<div style="font-size: 12px; color: #64748b; border-top: 1px dashed #334155; padding-top: 8px;">' +
+            'ไม่มีรายการจองอื่นๆ เพิ่มเติมในวันนี้' +
+          '</div>';
+        }
+
+        html += '</div></div>';
+      });
+
+      grid.innerHTML = html;
+    })
+    .catch(function(err) {
+      console.error('Kiosk Load Error:', err);
+    });
+}
 /* ==========================================================================
  * Real-time Background Polling & Booker Status Notifications
  * ======================================================================== */
