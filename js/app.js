@@ -739,48 +739,57 @@ function loadKioskData() {
         var statusText = isBusy ? 'กำลังใช้งาน (BUSY)' : (isMaint ? 'ปิดปรับปรุง' : 'ห้องว่าง (AVAILABLE)');
         var statusDot = isBusy ? '🔴' : (isMaint ? '🟡' : '🟢');
 
-        html += '<div style="background: #1e293b; border: 2px solid ' + (isBusy ? '#ef4444' : (isMaint ? '#94a3b8' : '#10b981')) + '; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);">' +
+        html += '<div style="background: #1e293b; border: 2px solid ' + (isBusy ? '#ef4444' : (isMaint ? '#94a3b8' : '#10b981')) + '; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); display: flex; flex-direction: column;">' +
           // รูปภาพและป้ายสถานะด้านบน
-          '<div style="position: relative; height: 160px; background: #334155;">' +
+          '<div style="position: relative; height: 150px; background: #334155; flex-shrink: 0;">' +
             '<img src="' + escapeHtml(r.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800') + '" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.75;">' +
             '<div style="position: absolute; top: 12px; right: 12px; background: ' + cardBg + '; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">' +
               statusDot + ' ' + statusText +
             '</div>' +
-            '<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(15,23,42,0.9), transparent); padding: 15px 15px 8px 15px;">' +
-              '<h3 style="margin: 0; font-size: 20px; color: #fff; font-weight: 700;">' + escapeHtml(r.roomName) + '</h3>' +
-              '<div style="font-size: 12.5px; color: #94a3b8;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.building) + ' ' + escapeHtml(r.floor) + ' &bull; ความจุ ' + r.capacity + ' คน</div>' +
+            '<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(15,23,42,0.95), transparent); padding: 15px 15px 8px 15px;">' +
+              '<h3 style="margin: 0; font-size: 19px; color: #fff; font-weight: 700;">' + escapeHtml(r.roomName) + '</h3>' +
+              '<div style="font-size: 12px; color: #94a3b8;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.building) + ' ' + escapeHtml(r.floor) + ' &bull; ความจุ ' + r.capacity + ' คน</div>' +
             '</div>' +
           '</div>' +
-          // รายละเอียดการประชุมปัจจุบัน / ถัดไป
-          '<div style="padding: 16px;">';
+          
+          // รายละเอียดการประชุมปัจจุบัน
+          '<div style="padding: 16px; flex-grow: 1; display: flex; flex-direction: column;">';
 
         if (isBusy && r.currentMeeting) {
           var m = r.currentMeeting;
-          html += '<div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px;">' +
+          html += '<div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; flex-shrink: 0;">' +
             '<div style="font-size: 11px; color: #f87171; font-weight: 700; text-transform: uppercase;">กำลังประชุมขณะนี้</div>' +
             '<div style="font-size: 15px; font-weight: 700; color: #fff; margin: 2px 0;">' + escapeHtml(m.Topic) + '</div>' +
             '<div style="font-size: 12.5px; color: #cbd5e1;"><i class="bi bi-clock"></i> ' + escapeHtml(m.StartTime) + ' - ' + escapeHtml(m.EndTime) + ' น.</div>' +
             '<div style="font-size: 12px; color: #94a3b8; margin-top: 4px;"><i class="bi bi-person"></i> ผู้จอง: ' + escapeHtml(m.BookerName) + ' (' + escapeHtml(m.Department) + ')</div>' +
           '</div>';
         } else {
-          html += '<div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 12px; border-radius: 0 8px 8px 0; margin-bottom: 12px; color: #34d399; font-weight: 600;">' +
+          html += '<div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; color: #34d399; font-weight: 600; flex-shrink: 0;">' +
             '<i class="bi bi-check-circle"></i> ห้องว่างพร้อมใช้งานในขณะนี้' +
           '</div>';
         }
 
-        // แสดงการประชุมถัดไป (ถ้ามี)
-        if (r.nextMeeting) {
-          var nm = r.nextMeeting;
-          html += '<div style="font-size: 12px; color: #94a3b8; border-top: 1px dashed #334155; padding-top: 8px;">' +
-            '<strong>ถัดไป:</strong> ' + escapeHtml(nm.StartTime) + ' - ' + escapeHtml(nm.EndTime) + ' น. — ' + escapeHtml(nm.Topic) +
-          '</div>';
+        // แสดงรายการจองถัดไป (สูงสุด 5 รายการ)
+        html += '<div style="font-size: 12.5px; color: #94a3b8; border-top: 1px dashed #334155; padding-top: 10px; margin-top: auto;">' +
+          '<div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;"><i class="bi bi-calendar-event"></i> รายการจองถัดไปวันนี้ (สูงสุด 5 รายการ):</div>';
+
+        if (r.nextMeetings && r.nextMeetings.length > 0) {
+          html += '<div style="display: flex; flex-direction: column; gap: 6px;">';
+          r.nextMeetings.forEach(function(nm, idx) {
+            html += '<div style="background: rgba(30, 41, 59, 0.7); padding: 6px 10px; border-radius: 6px; border: 1px solid #334155;">' +
+              '<div style="display: flex; justify-content: space-between; color: #e2e8f0; font-weight: 600;">' +
+                '<span>' + (idx + 1) + '. ' + escapeHtml(nm.Topic) + '</span>' +
+                '<span style="color: #38bdf8; font-size: 12px;">' + escapeHtml(nm.StartTime) + '-' + escapeHtml(nm.EndTime) + '</span>' +
+              '</div>' +
+              '<div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">ผู้จอง: ' + escapeHtml(nm.BookerName) + ' (' + escapeHtml(nm.Department) + ')</div>' +
+            '</div>';
+          });
+          html += '</div>';
         } else {
-          html += '<div style="font-size: 12px; color: #64748b; border-top: 1px dashed #334155; padding-top: 8px;">' +
-            'ไม่มีรายการจองอื่นๆ เพิ่มเติมในวันนี้' +
-          '</div>';
+          html += '<div style="color: #64748b; font-style: italic;">ไม่มีรายการจองอื่นๆ เพิ่มเติมในช่วงเวลาที่เหลือของวันนี้</div>';
         }
 
-        html += '</div></div>';
+        html += '</div></div></div>';
       });
 
       grid.innerHTML = html;
