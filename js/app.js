@@ -822,17 +822,18 @@ function loadKioskData() {
         if (r.nextMeetings && r.nextMeetings.length > 0) {
           html += '<div style="display: flex; flex-direction: column; gap: 6px;">';
           r.nextMeetings.forEach(function(nm, idx) {
+            var dateBadge = (nm.Date !== data.date) ? '<span style="background: rgba(56,189,248,0.2); color: #38bdf8; font-size: 10.5px; padding: 1px 6px; border-radius: 4px; margin-right: 4px;">' + formatDisplayDateThai(nm.Date) + '</span>' : '';
             html += '<div style="background: rgba(30, 41, 59, 0.7); padding: 6px 10px; border-radius: 6px; border: 1px solid #334155;">' +
               '<div style="display: flex; justify-content: space-between; color: #e2e8f0; font-weight: 600;">' +
                 '<span>' + (idx + 1) + '. ' + escapeHtml(nm.Topic) + '</span>' +
-                '<span style="color: #38bdf8; font-size: 12px;">' + escapeHtml(nm.StartTime) + '-' + escapeHtml(nm.EndTime) + '</span>' +
+                '<span style="color: #38bdf8; font-size: 12px; white-space: nowrap;">' + dateBadge + escapeHtml(nm.StartTime) + '-' + escapeHtml(nm.EndTime) + '</span>' +
               '</div>' +
               '<div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">ผู้จอง: ' + escapeHtml(nm.BookerName) + ' (' + escapeHtml(nm.Department) + ')</div>' +
             '</div>';
           });
           html += '</div>';
         } else {
-          html += '<div style="color: #64748b; font-style: italic;">ไม่มีรายการจองอื่นๆ เพิ่มเติมในช่วงเวลาที่เหลือของวันนี้</div>';
+          html += '<div style="color: #64748b; font-style: italic;">ไม่มีรายการจองอื่นๆ เพิ่มเติม</div>';
         }
 
         html += '</div></div></div>';
@@ -2660,10 +2661,15 @@ function switchAdminTab(tab, btn) {
   else if (tab === 'audit') loadAdminAudit();
 }
 
+/* ==========================================================================
+ * Admin Settings Management (ฟังก์ชันโหลดและบันทึกการตั้งค่าระบบ)
+ * ======================================================================== */
 function loadAdminSettings() {
   callGas('getAdminSettings', STATE.token)
     .then(function(res) {
       var s = res.data || {};
+      
+      // ตั้งค่าทั่วไป
       document.getElementById('setOrgName').value = s.ORG_NAME || '';
       if (document.getElementById('setFrontendUrl')) {
         document.getElementById('setFrontendUrl').value = s.FRONTEND_URL || '';
@@ -2671,13 +2677,19 @@ function loadAdminSettings() {
       document.getElementById('setOpenHour').value = extractCleanTime(s.OPEN_HOUR, '07:00');
       document.getElementById('setCloseHour').value = extractCleanTime(s.CLOSE_HOUR, '20:00');
 
-      // 🟢 โหลดค่าฟิลด์ขั้นสูงใส่ฟอร์ม
+      // 🟢 ตั้งค่าจำนวนรายการ Kiosk สูงสุด
+      if (document.getElementById('setKioskMaxUpcoming')) {
+        document.getElementById('setKioskMaxUpcoming').value = s.KIOSK_MAX_UPCOMING || '5';
+      }
+
+      // 🟢 ตั้งค่าระบบขั้นสูง (สเปกชีต, ปฏิทิน, ไดรฟ์, Webhook)
       if (document.getElementById('setSpreadsheetId')) document.getElementById('setSpreadsheetId').value = s.SPREADSHEET_ID || '';
       if (document.getElementById('setCalendarId')) document.getElementById('setCalendarId').value = s.CALENDAR_ID || '';
       if (document.getElementById('setDriveFolderId')) document.getElementById('setDriveFolderId').value = s.DRIVE_FOLDER_ID || '';
       if (document.getElementById('setChatWebhookUrl')) document.getElementById('setChatWebhookUrl').value = s.CHAT_WEBHOOK_URL || '';
       if (document.getElementById('setAdminNotifyEmail')) document.getElementById('setAdminNotifyEmail').value = s.ADMIN_NOTIFY_EMAIL || '';
 
+      // ตั้งค่าสถานะเปิด/ปิด (Select Options)
       setSelectValue('setRequireApproval', s.REQUIRE_APPROVAL, 'TRUE');
       setSelectValue('setCalendarSync', s.ENABLE_CALENDAR_SYNC, 'TRUE');
       setSelectValue('setChatNotify', s.ENABLE_CHAT_NOTIFY, 'TRUE');
@@ -2688,29 +2700,27 @@ function loadAdminSettings() {
     .catch(function(err) { showToast(err.message, 'error'); });
 }
 
-function setSelectValue(elementId, val, defaultVal) {
-  var el = document.getElementById(elementId);
-  if (!el) return;
-  var target = String(val !== undefined && val !== null ? val : defaultVal).trim().toUpperCase();
-  el.value = (target === 'TRUE' || target === '1') ? 'TRUE' : 'FALSE';
-}
-
 function submitAdminSettings(e) {
   e.preventDefault();
   setLoading(true, 'กำลังบันทึกการตั้งค่าระบบ...');
+  
   var payload = {
     ORG_NAME: document.getElementById('setOrgName').value.trim(),
     FRONTEND_URL: document.getElementById('setFrontendUrl') ? document.getElementById('setFrontendUrl').value.trim() : '',
     OPEN_HOUR: document.getElementById('setOpenHour').value,
     CLOSE_HOUR: document.getElementById('setCloseHour').value,
     
-    // 🟢 เก็บค่าฟิลด์ขั้นสูงส่งไปบันทึก
+    // 🟢 บันทึกค่าจำนวนรายการ Kiosk สูงสุด
+    KIOSK_MAX_UPCOMING: document.getElementById('setKioskMaxUpcoming') ? document.getElementById('setKioskMaxUpcoming').value.trim() : '5',
+
+    // 🟢 บันทึกค่าขั้นสูง
     SPREADSHEET_ID: document.getElementById('setSpreadsheetId') ? document.getElementById('setSpreadsheetId').value.trim() : '',
     CALENDAR_ID: document.getElementById('setCalendarId') ? document.getElementById('setCalendarId').value.trim() : '',
     DRIVE_FOLDER_ID: document.getElementById('setDriveFolderId') ? document.getElementById('setDriveFolderId').value.trim() : '',
     CHAT_WEBHOOK_URL: document.getElementById('setChatWebhookUrl') ? document.getElementById('setChatWebhookUrl').value.trim() : '',
     ADMIN_NOTIFY_EMAIL: document.getElementById('setAdminNotifyEmail') ? document.getElementById('setAdminNotifyEmail').value.trim() : '',
 
+    // สถานะเปิด/ปิดระบบ
     REQUIRE_APPROVAL: document.getElementById('setRequireApproval').value,
     ENABLE_CALENDAR_SYNC: document.getElementById('setCalendarSync').value,
     ENABLE_CHAT_NOTIFY: document.getElementById('setChatNotify').value,
@@ -2727,11 +2737,35 @@ function submitAdminSettings(e) {
       }
       updateTimeSlotOptions();
 
-      Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: 'การตั้งค่าระบบทั้งหมดถูกบันทึกลงฐานข้อมูลเรียบร้อยแล้ว', confirmButtonColor: '#0f4c81', timer: 2000 });
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกสำเร็จ!',
+        text: 'การตั้งค่าระบบและค่าพารามิเตอร์ทั้งหมดถูกบันทึกลงฐานข้อมูลเรียบร้อยแล้ว',
+        confirmButtonColor: '#0f4c81',
+        timer: 2000,
+        timerProgressBar: true
+      });
     })
-    .catch(function(err) { Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' }); })
-    .finally(function() { setLoading(false); });
+    .catch(function(err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'บันทึกไม่สำเร็จ',
+        text: err.message,
+        confirmButtonColor: '#0f4c81'
+      });
+    })
+    .finally(function() {
+      setLoading(false);
+    });
 }
+
+function setSelectValue(elementId, val, defaultVal) {
+  var el = document.getElementById(elementId);
+  if (!el) return;
+  var target = String(val !== undefined && val !== null ? val : defaultVal).trim().toUpperCase();
+  el.value = (target === 'TRUE' || target === '1') ? 'TRUE' : 'FALSE';
+}
+
 
 function loadAdminBookings() {
   callGas('searchBookings', STATE.token, {})
