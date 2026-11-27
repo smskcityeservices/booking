@@ -813,7 +813,7 @@ function updateTimeSlotOptions() {
     var previousStartVal = startSelect.value;
 
     for (var m = openMin; m < closeMin; m += 30) {
-      // กรองเวลาในอดีตออกเฉพาะเมื่อเป็น "วันนี้" เท่านั้น (ถ้าเป็นวันอื่น แสดงปกติทั้งหมด)
+      // 🟢 กรองเวลาในอดีตออกเฉพาะเมื่อเป็น "วันนี้" เท่านั้น (ถ้าเป็นวันในอนาคต แสดงทั้งหมด)
       if (isToday && m <= nowMinutes) {
         continue;
       }
@@ -845,24 +845,25 @@ function updateTimeSlotOptions() {
 
     rebuildEndTimeOptions();
     
-    // สั่งเปิด/ปิดปุ่ม Preset ตามเงื่อนไขวันที่
+    // 🟢 สั่งอัปเดตสถานะปุ่ม Preset โดยส่งค่า isToday เข้าไปตรวจสอบ
     disablePastPresetButtons(isToday, nowMinutes);
   }
 
   function disablePastPresetButtons(isToday, nowMinutes) {
     var presets = document.querySelectorAll('.time-preset-btn');
     
-    // 🟢 สำคัญมาก: ถ้าไม่ใช่ "วันนี้" (เช่น เป็นวันอื่นในอนาคต) บังคับเปิดใช้งานทุกปุ่ม 100% เสมอ
+    // 🟢 กฎเหล็ก: ถ้าไม่ใช่ "วันนี้" (เช่น เป็นวันในอนาคตที่เลือก) บังคับเปิดใช้งานปุ่มลัดทั้งหมดทันที 100% ห้ามเป็นสีเทา
     if (!isToday) {
       presets.forEach(function(btn) {
         btn.disabled = false;
         btn.style.opacity = '1';
         btn.style.cursor = 'pointer';
+        btn.style.pointerEvents = 'auto';
       });
       return;
     }
 
-    // 🟡 ถ้าเป็น "วันนี้" จึงค่อยเช็กเวลาปัจจุบัน
+    // 🟡 ถ้าเป็น "วันนี้" จึงค่อยเช็กเงื่อนไขเวลาปัจจุบันตามปกติ
     if (presets[0]) {
       var pastMorning = (nowMinutes >= timeToMinutes('12:00'));
       presets[0].disabled = pastMorning;
@@ -881,14 +882,6 @@ function updateTimeSlotOptions() {
       presets[2].style.opacity = pastAllDay ? '0.35' : '1';
       presets[2].style.cursor = pastAllDay ? 'not-allowed' : 'pointer';
     }
-  }
-
-  function disableTimePresets(disabled) {
-    document.querySelectorAll('.time-preset-btn').forEach(function(b) {
-      b.disabled = disabled;
-      b.style.opacity = disabled ? '0.35' : '1';
-      b.style.cursor = disabled ? 'not-allowed' : 'pointer';
-    });
   }
 
 function rebuildEndTimeOptions() {
