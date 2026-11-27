@@ -2644,6 +2644,13 @@ function loadAdminSettings() {
       document.getElementById('setOpenHour').value = extractCleanTime(s.OPEN_HOUR, '07:00');
       document.getElementById('setCloseHour').value = extractCleanTime(s.CLOSE_HOUR, '20:00');
 
+      // 🟢 โหลดค่าฟิลด์ขั้นสูงใส่ฟอร์ม
+      if (document.getElementById('setSpreadsheetId')) document.getElementById('setSpreadsheetId').value = s.SPREADSHEET_ID || '';
+      if (document.getElementById('setCalendarId')) document.getElementById('setCalendarId').value = s.CALENDAR_ID || '';
+      if (document.getElementById('setDriveFolderId')) document.getElementById('setDriveFolderId').value = s.DRIVE_FOLDER_ID || '';
+      if (document.getElementById('setChatWebhookUrl')) document.getElementById('setChatWebhookUrl').value = s.CHAT_WEBHOOK_URL || '';
+      if (document.getElementById('setAdminNotifyEmail')) document.getElementById('setAdminNotifyEmail').value = s.ADMIN_NOTIFY_EMAIL || '';
+
       setSelectValue('setRequireApproval', s.REQUIRE_APPROVAL, 'TRUE');
       setSelectValue('setCalendarSync', s.ENABLE_CALENDAR_SYNC, 'TRUE');
       setSelectValue('setChatNotify', s.ENABLE_CHAT_NOTIFY, 'TRUE');
