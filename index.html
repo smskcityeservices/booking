@@ -202,9 +202,10 @@
         <button class="nav-item" data-view="rooms" onclick="navigateTo('rooms')">
           <i class="bi bi-door-open"></i><span>ห้องประชุม</span>
         </button>
-        <button class="nav-item" data-view="view-kiosk" onclick="navigateTo('Kiosk')">
-          <span>หน้า Kiosk</span>
-        </button>
+        <button type="button" class="nav-item" data-view="kiosk" onclick="navigateTo('kiosk')">
+  <i class="bi bi-display"></i>
+  <span>จอแสดงผล Kiosk</span>
+</button>
 
         <!-- 🔴 เปลี่ยนสี Badge ตัวเลขรายการจองของฉันเป็นสีแดงสด -->
         <button class="nav-item auth-required-nav" data-view="mybookings" onclick="navigateTo('mybookings')" style="display:none;">
@@ -509,6 +510,10 @@
     <button class="mobile-bottom-btn" data-view="rooms" onclick="navigateTo('rooms')"><i class="bi bi-door-open"></i><span>ห้องประชุม</span></button>
     <button class="mobile-bottom-btn auth-required-mobile" data-view="calendar" onclick="navigateTo('calendar')" style="display:none;"><i class="bi bi-calendar3"></i><span>ปฏิทิน</span></button>
     <button class="mobile-bottom-btn auth-required-mobile" data-view="mybookings" onclick="navigateTo('mybookings')" style="display:none;"><i class="bi bi-journal-check"></i><span>ของฉัน</span></button>
+    <button type="button" class="mobile-bottom-btn" data-view="kiosk" onclick="navigateTo('kiosk')">
+  <i class="bi bi-display"></i>
+  <span>Kiosk</span>
+</button>
   </nav>
 
   <!-- Modals -->
