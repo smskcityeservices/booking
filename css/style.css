@@ -352,3 +352,29 @@
     .grid-2 { grid-template-columns: 1fr; }
     .mobile-bottom-nav { display: grid; }
   }
+/* ปรับปรุงเมนูจองห้องประชุมให้โดดเด่นเป็นพิเศษ (Primary CTA Button) */
+  .nav-item-cta {
+    background: linear-gradient(135deg, #0d9488 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.4) !important;
+    margin: 6px 0 8px !important;
+    transition: all 0.22s ease !important;
+  }
+  .nav-item-cta:hover {
+    filter: brightness(1.08) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 18px rgba(13, 148, 136, 0.55) !important;
+  }
+  .nav-item-cta i {
+    font-size: 19px !important;
+    color: #a7f3d0 !important;
+  }
+  .nav-item-cta.active {
+    background: #ffffff !important;
+    color: #0d9488 !important;
+  }
+  .nav-item-cta.active i {
+    color: #0d9488 !important;
+  }
