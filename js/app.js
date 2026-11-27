@@ -2676,6 +2676,14 @@ function submitAdminSettings(e) {
     FRONTEND_URL: document.getElementById('setFrontendUrl') ? document.getElementById('setFrontendUrl').value.trim() : '',
     OPEN_HOUR: document.getElementById('setOpenHour').value,
     CLOSE_HOUR: document.getElementById('setCloseHour').value,
+    
+    // 🟢 เก็บค่าฟิลด์ขั้นสูงส่งไปบันทึก
+    SPREADSHEET_ID: document.getElementById('setSpreadsheetId') ? document.getElementById('setSpreadsheetId').value.trim() : '',
+    CALENDAR_ID: document.getElementById('setCalendarId') ? document.getElementById('setCalendarId').value.trim() : '',
+    DRIVE_FOLDER_ID: document.getElementById('setDriveFolderId') ? document.getElementById('setDriveFolderId').value.trim() : '',
+    CHAT_WEBHOOK_URL: document.getElementById('setChatWebhookUrl') ? document.getElementById('setChatWebhookUrl').value.trim() : '',
+    ADMIN_NOTIFY_EMAIL: document.getElementById('setAdminNotifyEmail') ? document.getElementById('setAdminNotifyEmail').value.trim() : '',
+
     REQUIRE_APPROVAL: document.getElementById('setRequireApproval').value,
     ENABLE_CALENDAR_SYNC: document.getElementById('setCalendarSync').value,
     ENABLE_CHAT_NOTIFY: document.getElementById('setChatNotify').value,
@@ -2686,14 +2694,13 @@ function submitAdminSettings(e) {
 
   callGas('saveAdminSettings', STATE.token, payload)
     .then(function() {
-      STATE.settings.ORG_NAME = payload.ORG_NAME;
-      STATE.settings.FRONTEND_URL = payload.FRONTEND_URL;
-      STATE.settings.OPEN_HOUR = payload.OPEN_HOUR;
-      STATE.settings.CLOSE_HOUR = payload.CLOSE_HOUR;
-      document.getElementById('orgNameLabel').textContent = payload.ORG_NAME;
+      STATE.settings = payload;
+      if (document.getElementById('orgNameLabel')) {
+        document.getElementById('orgNameLabel').textContent = payload.ORG_NAME;
+      }
       updateTimeSlotOptions();
 
-      Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: 'การตั้งค่าระบบและ URL เว็บไซต์หลักถูกบันทึกเรียบร้อยแล้ว', confirmButtonColor: '#0f4c81', timer: 2000 });
+      Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: 'การตั้งค่าระบบทั้งหมดถูกบันทึกลงฐานข้อมูลเรียบร้อยแล้ว', confirmButtonColor: '#0f4c81', timer: 2000 });
     })
     .catch(function(err) { Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' }); })
     .finally(function() { setLoading(false); });
