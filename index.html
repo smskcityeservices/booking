@@ -342,13 +342,40 @@
           </div>
         </section>
 
-        <!-- View: Approval -->
-        <section class="app-view" id="view-approval">
-          <div class="card">
-            <div class="card-header"><div class="card-title"><i class="bi bi-check2-square"></i> รายการรออนุมัติการใช้ห้องประชุม</div><button class="btn btn-outline btn-sm" onclick="loadApprovalViewData()"><i class="bi bi-arrow-clockwise"></i> รีเฟรช</button></div>
-            <div class="table-wrap"><table><thead><tr><th>รหัสจอง</th><th>วันที่ / เวลา</th><th>ห้องประชุม</th><th>หัวข้อการประชุม</th><th>ผู้จอง / หน่วยงาน</th><th>จำนวน</th><th>ดำเนินการ</th></tr></thead><tbody id="standaloneApprovalBody"></tbody></table></div>
-          </div>
-        </section>
+       <!-- View: Approval Management -->
+<section class="app-view" id="view-approval">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="bi bi-check2-square"></i> รายการรออนุมัติการใช้ห้องประชุม</div>
+      <button class="btn btn-outline btn-sm" onclick="loadApprovalViewData()"><i class="bi bi-arrow-clockwise"></i> รีเฟรชข้อมูล</button>
+    </div>
+
+    <!-- 🔍 เพิ่มช่องค้นหาแบบ Live Search และตัวกรอง -->
+    <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:220px;">
+        <input type="text" id="approvalSearchQuery" placeholder="🔍 ค้นหา (หัวข้อ, ผู้จอง, รหัส, กอง/สำนัก)..." oninput="filterApprovalTable()">
+      </div>
+      <div style="width:200px;">
+        <select id="approvalRoomFilter" onchange="filterApprovalTable()">
+          <option value="">ทุกห้องประชุม</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>รหัสจอง</th><th>วันที่ / เวลา</th><th>ห้องประชุม</th><th>หัวข้อการประชุม</th><th>ผู้จอง / หน่วยงาน</th><th>จำนวน</th><th>ดำเนินการพิจารณา</th>
+          </tr>
+        </thead>
+        <tbody id="standaloneApprovalBody">
+          <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">กำลังโหลดรายการรออนุมัติ...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 
         <!-- View: Rooms -->
         <section class="app-view" id="view-rooms"><div class="card"><div class="card-header"><div class="card-title"><i class="bi bi-door-open"></i> ข้อมูลห้องประชุมทั้งหมด</div></div><div class="grid-3" id="roomsDirectoryGrid"></div></div></section>
