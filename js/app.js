@@ -1723,20 +1723,7 @@ function quickBookRoom(roomId) {
   setTimeout(function() { selectRoomFromAvail(roomId); }, 150);
 }
 
-/**
- * โหลดและแสดงรายการจองของฉัน พร้อมอัปเดตตัวเลข Badge และตรวจสอบสถานะอนุมัติ
- */
 function loadMyBookings() {
-  var emailInput = document.getElementById('myBookingEmailInput').value.trim();
-  var tbody = document.getElementById('myBookingsBody');
-  if (!tbody) return;
-
-  if (!STATE.user.authenticated && !emailInput) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:16px;">กรุณาเข้าสู่ระบบ หรือกรอกอีเมลเพื่อค้นหารายการจองของคุณ</td></tr>';
-    return;
-  }
-
-  function loadMyBookings() {
   var emailInput = document.getElementById('myBookingEmailInput').value.trim();
   var tbody = document.getElementById('myBookingsBody');
   if (!tbody) return;
