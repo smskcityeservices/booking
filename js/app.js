@@ -2639,28 +2639,53 @@ function rejectFromView(bookingId) {
 /* ==========================================================================
  * Admin Management (6 Tabs: Approval, All Bookings, Rooms, Users, Settings, Audit)
  * ======================================================================== */
-function loadAdminView() {
-  var isAdmin = (STATE.user.role === 'Admin');
-  document.querySelectorAll('.admin-only-tab').forEach(function(el) {
-    el.style.display = isAdmin ? 'inline-flex' : 'none';
+/* ==========================================================================
+ * Admin Management Tabs & Panel Controller (ควบคุมการสลับแท็บในหน้าจัดการระบบ)
+ * ======================================================================== */
+function switchAdminTab(tabName, btnElement) {
+  // 1. จัดการปุ่ม Tab เมนูย่อย
+  var tabButtons = document.querySelectorAll('#view-admin .tab-btn');
+  tabButtons.forEach(function(b) {
+    b.classList.remove('active');
+    b.classList.remove('btn-primary');
+    b.classList.add('btn-outline');
   });
-  loadAdminBookings();
+
+  if (btnElement) {
+    btnElement.classList.add('active');
+    btnElement.classList.remove('btn-outline');
+    btnElement.classList.add('btn-primary');
+  }
+
+  // 2. ซ่อน/แสดง Panel ของแต่ละแท็บ
+  var panels = document.querySelectorAll('#view-admin .tab-panel');
+  panels.forEach(function(p) {
+    p.style.display = 'none';
+  });
+
+  var targetPanel = document.getElementById('admin-tab-' + tabName);
+  if (targetPanel) {
+    targetPanel.style.display = 'block';
+  }
+
+  // 3. โหลดข้อมูลเฉพาะของแท็บนั้นๆ อัตโนมัติ
+  if (tabName === 'approval' || tabName === 'allbookings') {
+    if (typeof loadAdminBookings === 'function') loadAdminBookings();
+  } else if (tabName === 'rooms') {
+    if (typeof loadAdminRooms === 'function') loadAdminRooms();
+  } else if (tabName === 'users') {
+    if (typeof loadAdminUsers === 'function') loadAdminUsers();
+  } else if (tabName === 'settings') {
+    if (typeof loadAdminSettings === 'function') loadAdminSettings();
+  } else if (tabName === 'audit') {
+    if (typeof loadAdminAudit === 'function') loadAdminAudit();
+  }
 }
 
-function switchAdminTab(tab, btn) {
-  document.querySelectorAll('#view-admin .tab-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.querySelectorAll('#view-admin .tab-panel').forEach(function(p) { p.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  var panel = document.getElementById('admin-tab-' + tab);
-  if (panel) panel.classList.add('active');
-
-  if (tab === 'approval' || tab === 'allbookings') loadAdminBookings();
-  else if (tab === 'rooms') loadAdminRooms();
-  else if (tab === 'users') loadAdminUsers();
-  else if (tab === 'settings') loadAdminSettings();
-  else if (tab === 'audit') loadAdminAudit();
+function loadAdminView() {
+  var firstTabBtn = document.querySelector('#view-admin .tab-btn');
+  switchAdminTab('approval', firstTabBtn);
 }
-
 /* ==========================================================================
  * Admin Settings Management (ฟังก์ชันโหลดและบันทึกการตั้งค่าระบบ)
  * ======================================================================== */
