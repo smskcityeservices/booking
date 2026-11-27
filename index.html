@@ -171,17 +171,42 @@
         <div class="brand-text"><h1>ระบบจองห้องประชุม</h1><span id="orgNameLabel">เทศบาลเมืองสมุทรสงคราม</span></div>
       </div>
       <nav class="sidebar-nav">
-        <button class="nav-item active" data-view="dashboard" onclick="navigateTo('dashboard')"><i class="bi bi-speedometer2"></i><span>Dashboard</span></button>
-        <button class="nav-item" data-view="booking" onclick="navigateTo('booking')"><i class="bi bi-calendar-plus"></i><span>จองห้องประชุม</span></button>
-        <button class="nav-item approver-nav-item" id="navApprovalBtn" data-view="approval" onclick="navigateTo('approval')" style="display:none;"><i class="bi bi-check2-square"></i><span>อนุมัติการจอง</span><span class="menu-badge-count" id="sidebarPendingBadge" style="display:none;">0</span></button>
-        <button class="nav-item auth-required-nav" data-view="calendar" onclick="navigateTo('calendar')" style="display:none;"><i class="bi bi-calendar3"></i><span>ตารางการใช้ห้อง</span></button>
-        <button class="nav-item" data-view="rooms" onclick="navigateTo('rooms')"><i class="bi bi-door-open"></i><span>ห้องประชุม</span></button>
+        <button class="nav-item active" data-view="dashboard" onclick="navigateTo('dashboard')">
+          <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+        </button>
+
+        <!-- 🌟 เมนูจองห้องประชุมโดดเด่นพิเศษ -->
+        <button class="nav-item nav-item-cta" data-view="booking" onclick="navigateTo('booking')">
+          <i class="bi bi-calendar-plus-fill"></i><span>จองห้องประชุม</span>
+          <span class="badge" style="margin-left:auto; background:rgba(255,255,255,0.25); color:#fff; font-size:11px; padding:2px 7px;">จองด่วน</span>
+        </button>
+
+        <!-- เมนูอนุมัติการจอง (Approver / Admin) -->
+        <button class="nav-item approver-nav-item" id="navApprovalBtn" data-view="approval" onclick="navigateTo('approval')" style="display:none;">
+          <i class="bi bi-check2-square"></i><span>อนุมัติการจอง</span>
+          <span class="menu-badge-count" id="sidebarPendingBadge" style="display:none; background:#dc2626;">0</span>
+        </button>
+
+        <button class="nav-item auth-required-nav" data-view="calendar" onclick="navigateTo('calendar')" style="display:none;">
+          <i class="bi bi-calendar3"></i><span>ตารางการใช้ห้อง</span>
+        </button>
+        <button class="nav-item" data-view="rooms" onclick="navigateTo('rooms')">
+          <i class="bi bi-door-open"></i><span>ห้องประชุม</span>
+        </button>
+
+        <!-- 🔴 เปลี่ยนสี Badge ตัวเลขรายการจองของฉันเป็นสีแดงสด -->
         <button class="nav-item auth-required-nav" data-view="mybookings" onclick="navigateTo('mybookings')" style="display:none;">
           <i class="bi bi-journal-check"></i><span>รายการจองของฉัน</span>
-          <span class="menu-badge-count" id="sidebarMyBookingsBadge" style="display:none; background:#0284c7;">0</span>
+          <span class="menu-badge-count" id="sidebarMyBookingsBadge" style="display:none; background:#dc2626;">0</span>
         </button>
-        <button class="nav-item auth-required-nav" data-view="stats" onclick="navigateTo('stats')" style="display:none;"><i class="bi bi-bar-chart-line"></i><span>สถิติ &amp; ค้นหา</span></button>
-        <button class="nav-item" id="navAdminBtn" data-view="admin" onclick="navigateTo('admin')" style="display:none;"><i class="bi bi-shield-lock"></i><span>จัดการระบบ</span><span class="menu-badge-count" id="sidebarAdminBadge" style="display:none;">0</span></button>
+
+        <button class="nav-item auth-required-nav" data-view="stats" onclick="navigateTo('stats')" style="display:none;">
+          <i class="bi bi-bar-chart-line"></i><span>สถิติ &amp; ค้นหา</span>
+        </button>
+        <button class="nav-item" id="navAdminBtn" data-view="admin" onclick="navigateTo('admin')" style="display:none;">
+          <i class="bi bi-shield-lock"></i><span>จัดการระบบ</span>
+          <span class="menu-badge-count" id="sidebarAdminBadge" style="display:none; background:#dc2626;">0</span>
+        </button>
       </nav>
       <div class="sidebar-user-box" id="sidebarUserBox" style="display:none;">
         <div class="sidebar-user-avatar" id="sidebarUserAvatar">บ</div>
