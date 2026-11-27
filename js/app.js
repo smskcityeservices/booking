@@ -2402,6 +2402,7 @@ function updateAuthUI() {
   }
 }
 
+
 function openProfileModal() {
   if (!STATE.user || !STATE.user.authenticated) {
     openLoginModal();
