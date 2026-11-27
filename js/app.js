@@ -2392,9 +2392,15 @@ function loadDashboard() {
 
       updatePendingBadgeCount(kpis.pendingCount);
 
+      // กราฟเดิม
       renderBarChart('chartByRoom', charts.byRoom.labels, charts.byRoom.values, 'จำนวนครั้งที่ใช้งาน', '#0284c7');
       renderLineChart('chartByMonth', charts.byMonth.labels, charts.byMonth.values);
       renderDoughnutChart('chartByStatus', charts.byStatus.labels, charts.byStatus.values);
+
+      // 🟢 เพิ่มการเรนเดอร์กราฟสถิติแยกตามหน่วยงาน (แนวนอน อ่านชื่อกอง/สำนักง่าย)
+      if (charts.byDepartment) {
+        renderHorizontalBarChart('chartByDepartment', charts.byDepartment.labels, charts.byDepartment.values, 'จำนวนการจอง', '#0d9488');
+      }
 
       var pendingCardContainer = document.getElementById('dashPendingCardContainer');
       var isPrivileged = STATE.user.authenticated && ['Admin', 'Approver'].indexOf(STATE.user.role) !== -1;
@@ -2432,7 +2438,25 @@ function loadDashboard() {
     })
     .catch(function(err) { showToast(err.message, 'error'); });
 }
-
+function renderHorizontalBarChart(canvasId, labels, data, label, color) {
+  if (STATE.charts[canvasId]) STATE.charts[canvasId].destroy();
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  STATE.charts[canvasId] = new Chart(ctx, {
+    type: 'bar', // ใช้ bar แต่สลับ indexAxis เป็น y เพื่อให้ชื่อกองยาวๆ อ่านง่ายขึ้น
+    data: { 
+      labels: labels, 
+      datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 6 }] 
+    },
+    options: { 
+      indexAxis: 'y', // ทำให้เป็นกราฟแท่งแนวนอน (เหมาะกับชื่อหน่วยงานที่ค่อนข้างยาว)
+      responsive: true, 
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } }, 
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } 
+    }
+  });
+}
 function renderBarChart(canvasId, labels, data, label, color) {
   if (STATE.charts[canvasId]) STATE.charts[canvasId].destroy();
   var ctx = document.getElementById(canvasId);
