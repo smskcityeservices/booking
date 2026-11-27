@@ -406,6 +406,7 @@ function bootstrapApp() {
         initModernThaiCalendar('availCheckDate', function(selectedDate) {
           handleDateSelectionChange(selectedDate, 'availCheckDate');
         });
+      }
 
         initModernThaiCalendar('bkDate', function(selectedDate) {
           handleDateSelectionChange(selectedDate, 'bkDate');
