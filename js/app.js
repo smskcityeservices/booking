@@ -403,16 +403,23 @@ function bootstrapApp() {
 
       // 5. เปิดใช้งานปฏิทิน Flatpickr สไตล์ Modern (ภาษาไทยและปี พ.ศ.)
       if (typeof initModernThaiCalendar === 'function') {
+        // ปฏิทินเช็คห้องว่างหน้าจอง
         initModernThaiCalendar('availCheckDate', function(selectedDate) {
           handleDateSelectionChange(selectedDate, 'availCheckDate');
         });
-      }
 
+        // ปฏิทินวันที่ในฟอร์มจอง
         initModernThaiCalendar('bkDate', function(selectedDate) {
-          handleDateSelectionChange(selectedDate, 'bkDate');
+          syncDateFromForm();
+        });
+
+        // 🟢 เพิ่มปฏิทินค้นหาในหน้าสถิติและค้นหา (view-stats)
+        initModernThaiCalendar('searchDate', function(selectedDate) {
+          // เมื่อเลือกวันที่ค้นหา ให้เรียกฟังก์ชันค้นหาอัตโนมัติ (ถ้าต้องการ) หรือปล่อยไว้ให้กดปุ่มค้นหา
+          runBookingSearch();
         });
       }
-
+      
       // 6. สร้างตัวเลือกเวลาเริ่มต้น-สิ้นสุด (กรองเวลาในอดีตทิ้งอัตโนมัติหากเป็นวันนี้)
       updateTimeSlotOptions();
 
