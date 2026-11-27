@@ -2,765 +2,845 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>ระบบจองห้องประชุมออนไลน์ | เทศบาลเมืองสมุทรสงคราม</title>
+  
+  <!-- Google Fonts: Sarabun -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap Icons 1.11.3 -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales-all.global.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <!-- jQuery และ jQuery UI Datepicker (รองรับภาษาไทย) -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/smoothness/jquery-ui.css">
-  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-  <!-- Flatpickr Modern Calendar CSS & JS -->
+  
+  <!-- Flatpickr (ปฏิทินไทย พ.ศ.) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
+  
+  <!-- SweetAlert2 v11 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  
+  <!-- Chart.js 4.4.1 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- FullCalendar 6.1.11 -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  
+  <!-- QRCode.js 1.0.0 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Google Identity Services (GIS) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
   <style>
     :root {
-      --primary: #0f4c81; --primary-light: #0284c7; --teal: #0d9488;
-      --gradient: linear-gradient(135deg, #0f4c81 0%, #0284c7 55%, #0d9488 100%);
-      --bg: #f1f5f9; --surface: #ffffff; --text: #1e293b; --muted: #64748b;
-      --border: #e2e8f0; --success: #16a34a; --warning: #d97706; --danger: #dc2626;
-      --radius: 14px; --shadow: 0 4px 20px rgba(15, 76, 129, 0.08); --sidebar-w: 260px;
+      --primary: #0f4c81;
+      --primary-dark: #0a365f;
+      --accent: #17a2b8;
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --teal: #0d9488;
+      --bg-body: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --sidebar-width: 260px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Sarabun', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.55; }
-    .app-shell { display: flex; min-height: 100vh; }
-    .sidebar { width: var(--sidebar-w); background: var(--gradient); color: #fff; position: fixed; top: 0; left: 0; bottom: 0; z-index: 1040; display: flex; flex-direction: column; transition: transform 0.28s ease; box-shadow: 4px 0 24px rgba(15,76,129,0.18); }
-    .sidebar-brand { padding: 20px 18px; border-bottom: 1px solid rgba(255,255,255,0.16); display: flex; align-items: center; gap: 12px; }
-    .brand-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.2); display: grid; place-items: center; font-size: 22px; flex-shrink: 0; }
-    .brand-text h1 { font-size: 16px; font-weight: 700; line-height: 1.25; }
-    .brand-text span { font-size: 12px; opacity: 0.88; display: block; }
-    .sidebar-nav { flex: 1; padding: 14px 12px; overflow-y: auto; }
-    .nav-item { display: flex; align-items: center; gap: 12px; width: 100%; border: none; background: transparent; color: rgba(255,255,255,0.88); padding: 11px 14px; border-radius: 10px; font-family: inherit; font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; transition: all 0.2s; margin-bottom: 4px; }
-    .nav-item i { font-size: 18px; width: 22px; text-align: center; }
-    .nav-item:hover { background: rgba(255,255,255,0.14); color: #fff; }
-    .nav-item.active { background: #fff; color: var(--primary); font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-    .menu-badge-count { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; animation: pulseBadge 1.8s infinite; }
-    @keyframes pulseBadge { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
-    .sidebar-user-box { margin: 8px 12px 4px; padding: 10px 12px; background: rgba(255,255,255,0.14); border-radius: 12px; display: flex; align-items: center; gap: 10px; }
-    .sidebar-user-avatar { width: 36px; height: 36px; border-radius: 50%; background: #fff; color: var(--primary); font-weight: 700; display: grid; place-items: center; font-size: 15px; flex-shrink: 0; }
-    .sidebar-user-info { flex: 1; overflow: hidden; cursor: pointer; }
-    .sidebar-user-info strong, .sidebar-user-info small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .sidebar-user-info strong { font-size: 13.5px; }
-    .sidebar-user-info small { font-size: 11.5px; opacity: 0.85; }
-    .btn-logout-icon { border: none; background: rgba(255,255,255,0.2); color: #fff; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; display: grid; place-items: center; font-size: 15px; }
-    .btn-logout-icon:hover { background: var(--danger); }
-    .sidebar-footer { padding: 14px 16px; border-top: 1px solid rgba(255,255,255,0.15); font-size: 12px; opacity: 0.85; }
-    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1035; }
-    .sidebar-overlay.show { display: block; }
-    .main-wrap { flex: 1; margin-left: var(--sidebar-w); display: flex; flex-direction: column; min-width: 0; }
-    .topbar { position: sticky; top: 0; z-index: 1020; background: rgba(255,255,255,0.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); padding: 12px 22px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .topbar-left { display: flex; align-items: center; gap: 12px; }
-    .menu-toggle { display: none; border: 1px solid var(--border); background: #fff; color: var(--primary); width: 40px; height: 40px; border-radius: 10px; font-size: 20px; cursor: pointer; }
-    .page-title { font-size: 19px; font-weight: 700; color: var(--primary); }
-    .topbar-right { display: flex; align-items: center; gap: 10px; }
-    .user-pill { display: flex; align-items: center; gap: 8px; background: #f0f9ff; border: 1px solid #bae6fd; padding: 5px 12px; border-radius: 999px; font-size: 13px; color: var(--primary); cursor: pointer; }
-    .user-avatar-mini { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-    .user-meta-wrap { display: flex; flex-direction: column; line-height: 1.15; }
-    .user-dept-text { font-size: 11px; color: var(--muted); }
-    .role-badge { background: var(--primary); color: #fff; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-    .role-badge.Admin { background: #7c3aed; } .role-badge.Approver { background: #059669; } .role-badge.User { background: #0284c7; }
-    .btn-topbar-logout { border: none; background: transparent; color: var(--danger); cursor: pointer; font-size: 15px; padding: 2px 4px; border-radius: 6px; display: inline-flex; align-items: center; }
-    .content-area { padding: 20px 22px 80px; max-width: 1400px; width: 100%; margin: 0 auto; }
-    .app-view { display: none; animation: fadeIn 0.22s ease; }
-    .app-view.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 18px; }
-    .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Sarabun', sans-serif; }
+    body { background-color: var(--bg-body); color: var(--text-main); display: flex; min-height: 100vh; overflow-x: hidden; }
+
+    /* Layout & Sidebar */
+    .sidebar { width: var(--sidebar-width); background: var(--primary-dark); color: #fff; position: fixed; top: 0; bottom: 0; left: 0; z-index: 100; display: flex; flex-direction: column; transition: transform 0.3s ease; }
+    .sidebar-brand { padding: 20px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.15); }
+    .sidebar-menu { padding: 15px 10px; flex-grow: 1; overflow-y: auto; }
+    .nav-item { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 16px; color: #cbd5e1; background: transparent; border: none; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; margin-bottom: 4px; transition: all 0.2s; }
+    .nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .nav-item.active { background: var(--primary); color: #fff; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+    .nav-item-cta { background: #16a34a !important; color: #fff !important; font-weight: 700; margin-top: 10px; margin-bottom: 15px; }
+    .nav-item-cta:hover { background: #15803d !important; }
+    .badge-cta-pulse { background: #facc15; color: #1e293b; font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: 700; margin-left: auto; animation: pulse 2s infinite; }
+    .nav-badge { background: var(--danger); color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 10px; font-weight: 700; margin-left: auto; }
+
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+    .main-content { margin-left: var(--sidebar-width); flex-grow: 1; display: flex; flex-direction: column; min-width: 0; }
+    .app-header { background: #fff; border-bottom: 1px solid var(--border); padding: 15px 25px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 90; }
+    .app-body { padding: 25px; flex-grow: 1; }
+
+    /* Views */
+    .app-view { display: none; }
+    .app-view.active { display: block; animation: fadeIn 0.25s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* UI Components */
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; }
     .card-title { font-size: 17px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
-    .grid-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
-    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: space-between; gap: 12px; border-left: 4px solid var(--primary-light); }
-    .kpi-card.teal { border-left-color: var(--teal); } .kpi-card.green { border-left-color: var(--success); } .kpi-card.amber { border-left-color: var(--warning); } .kpi-card.red { border-left-color: var(--danger); }
-    .kpi-label { font-size: 13px; color: var(--muted); font-weight: 500; }
-    .kpi-value { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1.2; margin-top: 2px; }
-    .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .kpi-icon { width: 46px; height: 46px; border-radius: 12px; background: #eff6ff; color: var(--primary-light); display: grid; place-items: center; font-size: 22px; flex-shrink: 0; }
-    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-    .grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
-    .avail-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
-    .avail-item { border: 2px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; background: #fff; transition: all 0.18s; }
-    .avail-item:hover { border-color: var(--primary-light); transform: translateY(-2px); }
-    .avail-item.selected { border-color: var(--primary); background: #eff6ff; box-shadow: 0 0 0 3px rgba(2,132,199,0.16); }
-    .avail-status { font-size: 13px; font-weight: 600; margin-top: 4px; }
-    .avail-free { color: var(--success); } .avail-busy { color: var(--danger); }
-    .room-card { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); display: flex; flex-direction: column; }
-    .room-img { width: 100%; height: 170px; object-fit: cover; background: #e2e8f0; }
-    .room-body { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; }
-    .room-meta { font-size: 13px; color: var(--muted); margin: 6px 0; }
-    .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-    .form-group { display: flex; flex-direction: column; gap: 5px; }
-    .form-group.full { grid-column: 1 / -1; }
-    label { font-size: 13.5px; font-weight: 600; color: #334155; }
-    .req { color: var(--danger); }
-    input, select, textarea { font-family: inherit; font-size: 14.5px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; color: var(--text); width: 100%; }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(2,132,199,0.15); }
-    input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; filter: invert(0.3) sepia(1) saturate(5) hue-rotate(175deg); font-size: 16px; }
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 10px 16px; border-radius: 10px; border: none; font-family: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; transition: all 0.18s; }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn-primary { background: var(--gradient); color: #fff; }
-    .btn-outline { background: #fff; border: 1px solid var(--primary-light); color: var(--primary-light); }
-    .btn-success { background: var(--success); color: #fff; } .btn-danger { background: var(--danger); color: #fff; } .btn-light { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
-    .btn-sm { padding: 6px 11px; font-size: 13px; border-radius: 8px; }
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { padding: 11px 12px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
-    th { background: #f8fafc; color: var(--primary); font-weight: 700; white-space: nowrap; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-    .badge-pending { background: #fef3c7; color: #b45309; } .badge-approved { background: #dcfce7; color: #15803d; } .badge-rejected { background: #fee2e2; color: #b91c1c; } .badge-cancelled { background: #e2e8f0; color: #475569; } .badge-completed { background: #dbeafe; color: #1d4ed8; }
-    .alert { padding: 12px 15px; border-radius: 10px; margin: 12px 0; font-size: 14px; border: 1px solid transparent; }
-    .alert-success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; } .alert-danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-    .slot-chip { display: inline-block; margin: 4px 6px 0 0; padding: 4px 10px; background: #fff; border: 1px solid #0284c7; color: #0284c7; border-radius: 999px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
-    .slot-chip:hover { background: #0284c7; color: #fff; }
-    .time-preset-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-    .time-preset-btn { border: 1px solid var(--border); background: #fff; color: var(--text); padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 4px; }
-    .time-preset-btn.active { background: var(--primary-light); color: #fff; border-color: var(--primary-light); }
-    .duration-badge { display: inline-flex; align-items: center; gap: 4px; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; font-weight: 600; margin-left: auto; }
-    .live-avail-banner { border-radius: 10px; padding: 12px 14px; margin-top: 10px; display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; }
-    .live-avail-banner.available { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
-    .live-avail-banner.busy { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
-    .live-avail-banner.checking { background: #f0f9ff; border: 1px solid #bae6fd; color: #0369a1; }
-    .layout-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 8px; }
-    .layout-card { border: 2px solid var(--border); border-radius: 12px; background: #fff; cursor: pointer; overflow: hidden; transition: all 0.2s ease; display: flex; flex-direction: column; }
-    .layout-card.selected { border-color: var(--primary); background: #eff6ff; box-shadow: 0 0 0 3px rgba(2,132,199,0.2); }
-    .layout-media-wrap { position: relative; width: 100%; height: 115px; background: #e2e8f0; }
+    
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 13.5px; font-weight: 600; color: #475569; }
+    .form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; background: #fff; }
+    .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,76,129,0.12); }
+    
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-outline:hover { background: #f1f5f9; }
+    .btn-sm { padding: 6px 12px; font-size: 13px; }
+
+    /* Tables */
+    .table-wrap { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+    th { background: #f8fafc; color: #475569; font-weight: 600; padding: 12px 14px; border-bottom: 2px solid var(--border); }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); color: #334155; }
+    tr:hover td { background: #f8fafc; }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-pending { background: #fef3c7; color: #b45309; }
+    .badge-approved { background: #dcfce7; color: #15803d; }
+    .badge-rejected { background: #fee2e2; color: #991b1b; }
+    .badge-cancelled { background: #f1f5f9; color: #475569; }
+    .badge-completed { background: #e0f2fe; color: #0369a1; }
+
+    /* Room Availability Cards & Layout Selector */
+    .avail-item { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.2s; }
+    .avail-item:hover { border-color: var(--primary); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .avail-item.selected { border-color: var(--primary); background: #f0f9ff; box-shadow: 0 0 0 2px var(--primary); }
+    .avail-status { font-size: 13px; font-weight: 500; }
+    .avail-free { color: var(--success); }
+    .avail-busy { color: var(--danger); }
+
+    .layout-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; }
+    .layout-card { background: #fff; border: 2px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; }
+    .layout-card:hover { border-color: #cbd5e1; }
+    .layout-card.selected { border-color: var(--primary); background: #f0f9ff; box-shadow: 0 0 0 3px rgba(15,76,129,0.15); }
+    .layout-media-wrap { position: relative; height: 140px; background: #e2e8f0; }
     .layout-media-wrap img { width: 100%; height: 100%; object-fit: cover; }
-    .layout-tab-pill { position: absolute; bottom: 6px; right: 6px; background: rgba(15,23,42,0.75); border-radius: 6px; display: flex; padding: 2px; gap: 3px; }
-    .layout-tab-btn { border: none; background: transparent; color: #cbd5e1; font-size: 11px; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-family: inherit; }
-    .layout-tab-btn.active { background: var(--primary-light); color: #fff; font-weight: 600; }
-    .layout-info { padding: 10px 12px; display: flex; flex-direction: column; flex: 1; }
-    .layout-title { font-size: 13.5px; font-weight: 700; color: var(--primary); }
-    .layout-desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
-    .btn-preview-layout { font-size: 11.5px; color: var(--primary-light); background: transparent; border: none; cursor: pointer; text-decoration: underline; margin-top: 6px; align-self: flex-start; padding: 0; }
-    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-    .tab-btn { padding: 8px 14px; border-radius: 9px; border: 1px solid var(--border); background: #fff; color: var(--muted); font-family: inherit; font-weight: 600; cursor: pointer; }
-    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
-    .tab-panel { display: none; } .tab-panel.active { display: block; }
-    .modal-backdrop { display: none; position: fixed; inset: 0; z-index: 1060; background: rgba(15,23,42,0.55); backdrop-filter: blur(3px); align-items: center; justify-content: center; padding: 16px; }
-    .modal-backdrop.show { display: flex; }
-    .modal-box { background: #fff; border-radius: 16px; width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.22); }
-    .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-    .modal-header h3 { font-size: 17px; color: var(--primary); font-weight: 700; }
-    .modal-close { border: none; background: transparent; font-size: 22px; color: var(--muted); cursor: pointer; }
-    .modal-body { padding: 18px 20px; }
-    .modal-footer { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
-    .loading-overlay { display: none; position: fixed; inset: 0; z-index: 1090; background: rgba(255,255,255,0.75); backdrop-filter: blur(2px); align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
-    .loading-overlay.show { display: flex; }
-    .spinner { width: 44px; height: 44px; border: 4px solid #cbd5e1; border-top-color: var(--primary-light); border-radius: 50%; animation: spin 0.75s linear infinite; }
+    .layout-tab-pill { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.6); padding: 3px; border-radius: 20px; display: flex; gap: 2px; }
+    .layout-tab-btn { background: transparent; border: none; color: #fff; font-size: 11px; padding: 3px 10px; border-radius: 15px; cursor: pointer; }
+    .layout-tab-btn.active { background: var(--primary); font-weight: 600; }
+    .layout-info { padding: 12px; flex-grow: 1; display: flex; flex-direction: column; }
+    .layout-title { font-weight: 700; font-size: 14px; color: var(--primary); margin-bottom: 4px; }
+    .layout-desc { font-size: 12px; color: var(--muted); margin-bottom: 10px; flex-grow: 1; }
+    .btn-preview-layout { background: transparent; border: 1px solid var(--border); border-radius: 6px; font-size: 11.5px; color: var(--primary); padding: 4px; cursor: pointer; text-align: center; }
+    .btn-preview-layout:hover { background: #e0f2fe; }
+
+    /* Time Presets */
+    .time-preset-btn { background: #f1f5f9; border: 1px solid var(--border); color: #334155; font-size: 12.5px; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    .time-preset-btn:hover { background: #e2e8f0; }
+    .time-preset-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    /* Modals */
+    .modal-backdrop { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-backdrop.show { opacity: 1; pointer-events: auto; }
+    .modal-box { background: #fff; border-radius: 12px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); transform: translateY(10px); transition: transform 0.2s; }
+    .modal-backdrop.show .modal-box { transform: translateY(0); }
+
+    /* Loading Overlay */
+    .loading-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.85); z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .loading-overlay.show { opacity: 1; pointer-events: auto; }
+    .spinner { width: 42px; height: 42px; border: 4px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .legend-wrap { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
-    .legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; }
-    .legend-dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
-    .qr-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 14px; background: #f8fafc; border: 1px dashed #94a3b8; border-radius: 12px; margin-top: 12px; }
-    .mobile-bottom-nav { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 1030; background: #fff; border-top: 1px solid var(--border); grid-template-columns: repeat(4, 1fr); padding: 6px 4px; }
-    .mobile-bottom-btn { border: none; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: inherit; font-size: 11px; font-weight: 600; padding: 4px; cursor: pointer; }
-    .mobile-bottom-btn.active { color: var(--primary-light); }
-    .mobile-bottom-btn i { font-size: 19px; }
-    .swal2-popup { font-family: 'Sarabun', sans-serif !important; border-radius: 16px !important; }
-    .swal2-title { font-size: 19px !important; font-weight: 700 !important; color: var(--primary) !important; }
-    @media (max-width: 960px) { .sidebar { transform: translateX(-100%); } .sidebar.open { transform: translateX(0); } .main-wrap { margin-left: 0; } .menu-toggle { display: inline-grid; place-items: center; } .grid-2 { grid-template-columns: 1fr; } .mobile-bottom-nav { display: grid; } }
-    @media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } .content-area { padding: 14px 12px 84px; } .topbar { padding: 10px 14px; } .user-meta-wrap { display: none; } }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main-content { margin-left: 0; }
+      .mobile-toggle { display: inline-flex !important; }
+    }
+    .mobile-toggle { display: none; background: transparent; border: none; font-size: 22px; cursor: pointer; color: var(--primary); }
+    .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 95; display: none; }
+    .sidebar-overlay.show { display: block; }
   </style>
 </head>
 <body>
+
+  <!-- Sidebar Navigation -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <i class="bi bi-building-fill-check"></i>
+      <span id="orgNameLabel">เทศบาลเมืองสมุทรสงคราม</span>
+    </div>
+    <div class="sidebar-menu">
+      <button type="button" class="nav-item active" data-view="dashboard" onclick="navigateTo('dashboard')">
+        <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+      </button>
+      <button type="button" class="nav-item nav-item-cta" data-view="booking" onclick="navigateTo('booking')">
+        <i class="bi bi-calendar-plus"></i><span>จองห้องประชุม</span>
+        <span class="badge-cta-pulse">จองด่วน</span>
+      </button>
+      <button type="button" class="nav-item" data-view="calendar" onclick="navigateTo('calendar')">
+        <i class="bi bi-calendar3"></i><span>ตารางการใช้ห้อง</span>
+      </button>
+      <button type="button" class="nav-item" data-view="rooms" onclick="navigateTo('rooms')">
+        <i class="bi bi-door-open"></i><span>ห้องประชุม</span>
+      </button>
+      
+      <!-- เมนู Kiosk สำหรับขึ้นจอภาพ -->
+      <button type="button" class="nav-item" data-view="kiosk" onclick="navigateTo('kiosk')">
+        <i class="bi bi-display"></i><span>จอแสดงผล Kiosk</span>
+      </button>
+
+      <button type="button" class="nav-item auth-required-nav" data-view="mybookings" onclick="navigateTo('mybookings')" style="display:none;">
+        <i class="bi bi-journal-check"></i><span>รายการของฉัน</span>
+        <span id="sidebarMyBookingsBadge" class="nav-badge" style="display:none;">0</span>
+      </button>
+      <button type="button" class="nav-item auth-required-nav" data-view="stats" onclick="navigateTo('stats')" style="display:none;">
+        <i class="bi bi-search"></i><span>สถิติและค้นหา</span>
+      </button>
+      <button type="button" class="nav-item" data-view="approval" id="navApprovalBtn" onclick="navigateTo('approval')" style="display:none;">
+        <i class="bi bi-check2-square"></i><span>อนุมัติการจอง</span>
+        <span id="sidebarPendingBadge" class="nav-badge" style="display:none;">0</span>
+      </button>
+      <button type="button" class="nav-item" data-view="admin" id="navAdminBtn" onclick="navigateTo('admin')" style="display:none;">
+        <i class="bi bi-gear-fill"></i><span>จัดการระบบ</span>
+        <span id="sidebarAdminBadge" class="nav-badge" style="display:none;">0</span>
+      </button>
+    </div>
+  </div>
+
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
-  <div class="app-shell">
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-brand">
-        <div class="brand-icon"><i class="bi bi-building-check"></i></div>
-        <div class="brand-text"><h1>ระบบจองห้องประชุม</h1><span id="orgNameLabel">เทศบาลเมืองสมุทรสงคราม</span></div>
+
+  <!-- Main Content Layout -->
+  <div class="main-content">
+    <header class="app-header">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <button class="mobile-toggle" onclick="toggleSidebar(true)"><i class="bi bi-list"></i></button>
+        <h1 id="pageTitle" style="font-size: 18px; font-weight: 700; color: var(--primary);">Dashboard ภาพรวมระบบ</h1>
       </div>
-      <nav class="sidebar-nav">
-        <button class="nav-item active" data-view="dashboard" onclick="navigateTo('dashboard')">
-          <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+      <div>
+        <button type="button" class="btn btn-primary btn-sm" id="authActionBtn" onclick="openLoginModal()">
+          <i class="bi bi-person-circle"></i> เข้าสู่ระบบ / ลงทะเบียน
         </button>
-
-        <!-- 🌟 เมนูจองห้องประชุมโดดเด่นพิเศษ -->
-        <button class="nav-item nav-item-cta" data-view="booking" onclick="navigateTo('booking')">
-          <i class="bi bi-calendar-plus-fill"></i><span>จองห้องประชุม</span>
-          <span class="badge" style="margin-left:auto; background:rgba(255,255,255,0.25); color:#fff; font-size:11px; padding:2px 7px;">จองด่วน</span>
-        </button>
-
-        <!-- เมนูอนุมัติการจอง (Approver / Admin) -->
-        <button class="nav-item approver-nav-item" id="navApprovalBtn" data-view="approval" onclick="navigateTo('approval')" style="display:none;">
-          <i class="bi bi-check2-square"></i><span>อนุมัติการจอง</span>
-          <span class="menu-badge-count" id="sidebarPendingBadge" style="display:none; background:#dc2626;">0</span>
-        </button>
-
-        <button class="nav-item auth-required-nav" data-view="calendar" onclick="navigateTo('calendar')" style="display:none;">
-          <i class="bi bi-calendar3"></i><span>ตารางการใช้ห้อง</span>
-        </button>
-        <button class="nav-item" data-view="rooms" onclick="navigateTo('rooms')">
-          <i class="bi bi-door-open"></i><span>ห้องประชุม</span>
-        </button>
-        <button type="button" class="nav-item" data-view="kiosk" onclick="navigateTo('kiosk')">
-      <i class="bi bi-display"></i><span>จอแสดงผล Kiosk</span>
-    </button>
-
-        <!-- 🔴 เปลี่ยนสี Badge ตัวเลขรายการจองของฉันเป็นสีแดงสด -->
-        <button class="nav-item auth-required-nav" data-view="mybookings" onclick="navigateTo('mybookings')" style="display:none;">
-          <i class="bi bi-journal-check"></i><span>รายการจองของฉัน</span>
-          <span class="menu-badge-count" id="sidebarMyBookingsBadge" style="display:none; background:#dc2626;">0</span>
-        </button>
-
-        <button class="nav-item auth-required-nav" data-view="stats" onclick="navigateTo('stats')" style="display:none;">
-          <i class="bi bi-bar-chart-line"></i><span>สถิติ &amp; ค้นหา</span>
-        </button>
-        <button class="nav-item" id="navAdminBtn" data-view="admin" onclick="navigateTo('admin')" style="display:none;">
-          <i class="bi bi-shield-lock"></i><span>จัดการระบบ</span>
-          <span class="menu-badge-count" id="sidebarAdminBadge" style="display:none; background:#dc2626;">0</span>
-        </button>
-      </nav>
-      <div class="sidebar-user-box" id="sidebarUserBox" style="display:none;">
-        <div class="sidebar-user-avatar" id="sidebarUserAvatar">บ</div>
-        <div class="sidebar-user-info" onclick="openProfileModal()"><strong id="sidebarUserName">-</strong><small id="sidebarUserDept">-</small></div>
-        <button type="button" class="btn-logout-icon" onclick="handleLogout()" title="ออกจากระบบ"><i class="bi bi-box-arrow-right"></i></button>
+        <div id="headerUserBox" style="display: none; align-items: center; gap: 12px; cursor: pointer;" onclick="openProfileModal()">
+          <div id="headerUserAvatar" style="width: 36px; height: 36px; background: var(--primary); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700;">U</div>
+          <div style="text-align: left; line-height: 1.2;">
+            <div id="headerUserName" style="font-size: 14px; font-weight: 700; color: var(--text-main);">ชื่อผู้ใช้</div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <small id="headerUserDept" style="color: var(--muted); font-size: 11.5px;">กอง/สำนัก</small>
+              <span id="headerUserRole" class="badge badge-approved" style="font-size: 10px; padding: 1px 6px;">User</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="sidebar-footer"><div><i class="bi bi-geo-alt"></i> เทศบาลเมืองสมุทรสงคราม</div><div style="opacity:0.75;">GitHub Pages Edition</div></div>
-    </aside>
+    </header>
 
-    <!-- Main Content -->
-    <div class="main-wrap">
-      <header class="topbar">
-        <div class="topbar-left">
-          <button class="menu-toggle" onclick="toggleSidebar(true)"><i class="bi bi-list"></i></button>
-          <div class="page-title" id="pageTitle">Dashboard ภาพรวมระบบ</div>
+    <div class="app-body">
+
+      <!-- View: Dashboard -->
+      <section class="app-view active" id="view-dashboard">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 25px;">
+          <div class="card" style="margin-bottom:0; display:flex; align-items:center; gap:16px;">
+            <div style="width:50px; height:50px; background:#e0f2fe; color:#0284c7; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;"><i class="bi bi-door-open"></i></div>
+            <div><div style="font-size:13px; color:var(--muted);">ห้องประชุมทั้งหมด</div><div id="kpiTotalRooms" style="font-size:22px; font-weight:700; color:var(--primary);">0</div></div>
+          </div>
+          <div class="card" style="margin-bottom:0; display:flex; align-items:center; gap:16px;">
+            <div style="width:50px; height:50px; background:#dcfce7; color:#16a34a; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;"><i class="bi bi-check-circle"></i></div>
+            <div><div style="font-size:13px; color:var(--muted);">ห้องว่างวันนี้</div><div id="kpiAvailToday" style="font-size:22px; font-weight:700; color:#16a34a;">0</div></div>
+          </div>
+          <div class="card" style="margin-bottom:0; display:flex; align-items:center; gap:16px;">
+            <div style="width:50px; height:50px; background:#fee2e2; color:#dc2626; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;"><i class="bi bi-calendar-check"></i></div>
+            <div><div style="font-size:13px; color:var(--muted);">การจองวันนี้</div><div id="kpiBookedToday" style="font-size:22px; font-weight:700; color:#dc2626;">0</div></div>
+          </div>
+          <div class="card" style="margin-bottom:0; display:flex; align-items:center; gap:16px;">
+            <div style="width:50px; height:50px; background:#fef3c7; color:#d97706; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:24px;"><i class="bi bi-hourglass-split"></i></div>
+            <div><div style="font-size:13px; color:var(--muted);">รออนุมัติ</div><div id="kpiPending" style="font-size:22px; font-weight:700; color:#d97706;">0</div></div>
+          </div>
         </div>
-        <div class="topbar-right">
-          <div class="user-pill" id="headerUserBox" style="display:none;" onclick="openProfileModal()" title="คลิกเพื่อดู/แก้ไขโปรไฟล์">
-            <div class="user-avatar-mini" id="headerUserAvatar">บ</div>
-            <div class="user-meta-wrap"><span class="user-name-text" id="headerUserName">-</span><span class="user-dept-text" id="headerUserDept">-</span></div>
-            <span class="role-badge" id="headerUserRole">User</span>
-            <button type="button" class="btn-topbar-logout" onclick="event.stopPropagation(); handleLogout();" title="ออกจากระบบ"><i class="bi bi-box-arrow-right"></i></button>
+
+        <!-- Dashboard Quick Approval (เฉพาะ Admin/Approver) -->
+        <div class="card" id="dashPendingCardContainer" style="display:none; border-left: 4px solid var(--warning);">
+          <div class="card-header">
+            <div class="card-title"><i class="bi bi-exclamation-triangle-fill" style="color:var(--warning);"></i> รายการจองด่วนที่รอการอนุมัติของคุณ</div>
+            <button class="btn btn-outline btn-sm" onclick="loadDashboard()"><i class="bi bi-arrow-clockwise"></i> รีเฟรช</button>
           </div>
-          <button class="btn btn-primary btn-sm" id="authActionBtn" onclick="openLoginModal()"><i class="bi bi-person-circle"></i> <span>เข้าสู่ระบบ</span></button>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>รหัส</th><th>วันที่ / เวลา</th><th>ห้องประชุม</th><th>หัวข้อ</th><th>ผู้จอง / หน่วยงาน</th><th>สถานะ</th><th>ดำเนินการด่วน</th></tr>
+              </thead>
+              <tbody id="dashPendingBody"></tbody>
+            </table>
+          </div>
         </div>
-      </header>
 
-      <main class="content-area">
-        <!-- View: Dashboard -->
-        <section class="app-view active" id="view-dashboard">
-          <div class="card" style="background:var(--gradient); color:#fff; border:none;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-              <div>
-                <h2 style="font-size:21px; font-weight:700;">ระบบจองห้องประชุมออนไลน์ เทศบาลเมืองสมุทรสงคราม</h2>
-                <p style="opacity:0.9; font-size:14px;">ตรวจสอบตารางห้องประชุมแบบ Real-time จองห้อง และติดตามสถานะอนุมัติได้ทุกที่</p>
-              </div>
-              <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="btn btn-light" onclick="navigateTo('rooms')"><i class="bi bi-door-open"></i> ดูห้องประชุม</button>
-                <button class="btn" style="background:#fff; color:var(--primary);" onclick="navigateTo('booking')"><i class="bi bi-plus-circle"></i> จองห้องประชุมทันที</button>
-              </div>
-            </div>
-          </div>
-          <div class="grid-kpi">
-            <div class="kpi-card"><div><div class="kpi-label">ห้องประชุมทั้งหมด</div><div class="kpi-value" id="kpiTotalRooms">-</div></div><div class="kpi-icon"><i class="bi bi-building"></i></div></div>
-            <div class="kpi-card green"><div><div class="kpi-label">ห้องว่างวันนี้</div><div class="kpi-value" id="kpiAvailToday">-</div></div><div class="kpi-icon" style="background:#dcfce7; color:#15803d;"><i class="bi bi-check-circle"></i></div></div>
-            <div class="kpi-card teal"><div><div class="kpi-label">ห้องที่ถูกจองวันนี้</div><div class="kpi-value" id="kpiBookedToday">-</div></div><div class="kpi-icon" style="background:#ccfbf1; color:#0f766e;"><i class="bi bi-calendar-event"></i></div></div>
-            <div class="kpi-card"><div><div class="kpi-label">การจองทั้งหมด</div><div class="kpi-value" id="kpiTotalBookings">-</div></div><div class="kpi-icon"><i class="bi bi-journal-text"></i></div></div>
-            <div class="kpi-card amber"><div><div class="kpi-label">รออนุมัติ</div><div class="kpi-value" id="kpiPending">-</div></div><div class="kpi-icon" style="background:#fef3c7; color:#b45309;"><i class="bi bi-hourglass-split"></i></div></div>
-            <div class="kpi-card green"><div><div class="kpi-label">อนุมัติแล้ว</div><div class="kpi-value" id="kpiApproved">-</div></div><div class="kpi-icon" style="background:#dcfce7; color:#15803d;"><i class="bi bi-patch-check"></i></div></div>
-            <div class="kpi-card red"><div><div class="kpi-label">ยกเลิก</div><div class="kpi-value" id="kpiCancelled">-</div></div><div class="kpi-icon" style="background:#fee2e2; color:#b91c1c;"><i class="bi bi-x-circle"></i></div></div>
-            <div class="kpi-card teal"><div><div class="kpi-label">ห้องที่ใช้บ่อยที่สุด</div><div class="kpi-value" style="font-size:17px;" id="kpiMostUsed">-</div><div class="kpi-sub" id="kpiMostUsedSub"></div></div><div class="kpi-icon" style="background:#e0f2fe; color:#0369a1;"><i class="bi bi-trophy"></i></div></div>
-          </div>
-          <!-- แถวที่ 1: กราฟแยกตามห้องประชุม และ แนวโน้มรายเดือน -->
-          <div class="grid-2">
-            <div class="card">
-              <div class="card-header"><div class="card-title"><i class="bi bi-bar-chart"></i> สถิติการใช้งานแยกตามห้องประชุม</div></div>
-              <canvas id="chartByRoom" height="190"></canvas>
-            </div>
-            <div class="card">
-              <div class="card-header"><div class="card-title"><i class="bi bi-graph-up"></i> แนวโน้มการจองรายเดือน</div></div>
-              <canvas id="chartByMonth" height="190"></canvas>
-            </div>
-          </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 25px;">
+          <div class="card" style="margin-bottom:0;"><div style="font-size:12.5px; color:var(--muted);">การจองทั้งหมดในระบบ</div><div id="kpiTotalBookings" style="font-size:20px; font-weight:700; color:var(--text-main);">0</div></div>
+          <div class="card" style="margin-bottom:0;"><div style="font-size:12.5px; color:var(--muted);">อนุมัติแล้ว</div><div id="kpiApproved" style="font-size:20px; font-weight:700; color:var(--success);">0</div></div>
+          <div class="card" style="margin-bottom:0;"><div style="font-size:12.5px; color:var(--muted);">ยกเลิก</div><div id="kpiCancelled" style="font-size:20px; font-weight:700; color:var(--muted);">0</div></div>
+          <div class="card" style="margin-bottom:0;"><div style="font-size:12.5px; color:var(--muted);">ห้องยอดนิยมสูงสุด</div><div id="kpiMostUsed" style="font-size:16px; font-weight:700; color:var(--teal);">-</div><small id="kpiMostUsedSub" style="color:var(--muted);"></small></div>
+        </div>
 
-          <!-- แถวที่ 2: กราฟสถิติแยกตามหน่วยงาน (กอง/สำนัก) - ขยายเต็มความกว้างเพื่อให้แสดงชื่อหน่วยงานยาวๆ ได้ชัดเจน -->
-          <div class="card" style="background:#fff; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom:20px;">
-            <div class="card-header" style="margin-bottom: 15px;">
-              <div class="card-title" style="font-weight:700; font-size:16px; color:#0f4c81;">
-                <i class="bi bi-building"></i> สถิติการจองห้องประชุมแยกตามหน่วยงาน (กอง/สำนัก)
-              </div>
-            </div>
-            <div style="position: relative; height: 300px; width: 100%;">
-              <canvas id="chartByDepartment"></canvas>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:20px; margin-bottom:20px;">
+          <div class="card"><div class="card-header"><div class="card-title"><i class="bi bi-bar-chart"></i> สถิติการใช้งานแยกตามห้องประชุม</div></div><canvas id="chartByRoom" height="190"></canvas></div>
+          <div class="card"><div class="card-header"><div class="card-title"><i class="bi bi-graph-up"></i> แนวโน้มการจองรายเดือน</div></div><canvas id="chartByMonth" height="190"></canvas></div>
+        </div>
+
+        <div class="card" style="background:#fff; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+          <div class="card-header" style="margin-bottom: 15px;">
+            <div class="card-title" style="font-weight:700; font-size:16px; color:#0f4c81;">
+              <i class="bi bi-building"></i> สถิติการจองห้องประชุมแยกตามหน่วยงาน (กอง/สำนัก)
             </div>
           </div>
-
-          <!-- ตารางรายการจองรออนุมัติ -->
-          <div class="card" id="dashPendingCardContainer" style="display:none;">
-            <div class="card-header">
-              <div class="card-title"><i class="bi bi-clock-history"></i> รายการจองล่าสุดที่รออนุมัติ</div>
-              <button class="btn btn-outline btn-sm" onclick="loadDashboard()"><i class="bi bi-arrow-clockwise"></i> รีเฟรช</button>
-            </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr><th>รหัส</th><th>วันที่ / เวลา</th><th>ห้องประชุม</th><th>หัวข้อการประชุม</th><th>ผู้จอง / หน่วยงาน</th><th>สถานะ</th><th>ดำเนินการพิจารณา</th></tr>
-                </thead>
-                <tbody id="dashPendingBody"></tbody>
-              </table>
-            </div>
+          <div style="position: relative; height: 300px; width: 100%;">
+            <canvas id="chartByDepartment"></canvas>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <!-- View: Stats & Search -->
-        <section class="app-view" id="view-stats">
-          <div class="card mb-4" style="background:#fff; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-            <div class="card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
-              <div class="card-title" style="font-size:16px; font-weight:700; color:#0f4c81;">
-                <i class="bi bi-search"></i> ค้นหารายการจองห้องประชุมทั้งหมด
-              </div>
+      <!-- View: Booking -->
+      <section class="app-view" id="view-booking">
+        <!-- 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน (วันที่ชิดขวาสุด) -->
+        <div class="card mb-4" style="padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+            <div style="font-weight: 700; font-size: 16px; color: #0f4c81;">
+              <i class="bi bi-calendar-check"></i> 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน
             </div>
             
-            <div class="form-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:16px;">
-              <div class="form-group">
-                <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">คำค้นหา</label>
-                <input type="text" id="searchQuery" class="form-control" placeholder="รหัส / ผู้จอง / หัวข้อ">
+            <div style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+              <label for="availCheckDate" style="font-size: 13.5px; font-weight: 600; color: #475569; margin: 0; white-space: nowrap;">
+                <i class="bi bi-calendar3"></i> วันที่ใช้งาน:
+              </label>
+              <input type="text" id="availCheckDate" class="form-control" style="background: #fff; cursor: pointer; width: 140px; text-align: center; font-weight: 600;" placeholder="-- เลือกวันที่ --" readonly>
+            </div>
+          </div>
+
+          <div id="roomAvailCards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+            <div style="color:var(--muted); padding:10px 0;">กำลังโหลดสถานะห้องประชุม...</div>
+          </div>
+        </div>
+
+        <!-- 2. ฟอร์มกรอกข้อมูลการจอง -->
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="bi bi-pencil-square"></i> 2. กรอกข้อมูลการจองและกำหนดรูปแบบห้องประชุม</div></div>
+          <form id="bookingForm" onsubmit="submitBookingForm(event)">
+            <div class="form-grid">
+              <div class="form-group"><label>ชื่อผู้จอง *</label><input type="text" id="bkName" class="form-control" required></div>
+              <div class="form-group"><label>หน่วยงาน (กอง/สำนัก) *</label><select id="bkDept" class="form-control" required></select></div>
+              <div class="form-group"><label>เบอร์โทรศัพท์ติดต่อ *</label><input type="tel" id="bkPhone" class="form-control" placeholder="0812345678" required></div>
+              <div class="form-group"><label>อีเมลผู้ใช้งาน *</label><input type="email" id="bkEmail" class="form-control" required></div>
+            </div>
+
+            <div class="form-grid" style="margin-top: 15px;">
+              <div class="form-group"><label>ห้องประชุม *</label><select id="bkRoomId" class="form-control" onchange="syncSelectedRoomCard(); triggerAutoCheckAvailability();" required></select></div>
+              <div class="form-group"><label>วันที่ใช้งาน *</label><input type="text" id="bkDate" class="form-control" onchange="syncDateFromForm()" placeholder="-- เลือกวันที่ --" readonly style="background:#fff; cursor:pointer;" required></div>
+            </div>
+
+            <!-- กำหนดช่วงเวลากับ Presets -->
+            <div class="form-group" style="margin-top: 15px; background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 15px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <label style="font-weight: 700; color: var(--primary); margin: 0;"><i class="bi bi-clock"></i> กำหนดช่วงเวลาการใช้งาน *</label>
+                <div id="bookingDurationText" style="font-size: 13px; font-weight: 600; background: #e0f2fe; color: #0369a1; padding: 2px 10px; border-radius: 12px; border: 1px solid #bae6fd;">รวม 0 นาที</div>
               </div>
               
-              <div class="form-group">
-                <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">ห้องประชุม</label>
-                <select id="searchRoom" class="form-control"><option value="">ทั้งหมด</option></select>
+              <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+                <button type="button" class="time-preset-btn" onclick="applyTimePreset('08:30', '12:00', this)"><i class="bi bi-sun"></i> เช้า (08:30 - 12:00)</button>
+                <button type="button" class="time-preset-btn" onclick="applyTimePreset('13:00', '16:30', this)"><i class="bi bi-moon"></i> บ่าย (13:00 - 16:30)</button>
+                <button type="button" class="time-preset-btn" onclick="applyTimePreset('08:30', '16:30', this)"><i class="bi bi-calendar-day"></i> เต็มวัน (08:30 - 16:30)</button>
+                <button type="button" class="time-preset-btn" onclick="applyTimeDuration(60, this)"><i class="bi bi-stopwatch"></i> 1 ชม.</button>
+                <button type="button" class="time-preset-btn" onclick="applyTimeDuration(120, this)"><i class="bi bi-stopwatch"></i> 2 ชม.</button>
               </div>
-              
-              <!-- ช่องวันที่ใช้งาน ปรับปรุงรองรับ Flatpickr สไตล์ Modern (ภาษาไทย / พ.ศ.) -->
-              <div class="form-group">
-                <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">วันที่ใช้งาน</label>
-                <input type="text" id="searchDate" class="form-control" placeholder="-- ทุกวันที่ --" readonly style="background:#fff; cursor:pointer;">
+
+              <div class="form-grid" style="margin-bottom: 0;">
+                <div class="form-group"><label>เวลาเริ่มต้น</label><select id="bkStart" class="form-control" onchange="onStartTimeChanged(); triggerAutoCheckAvailability();" required></select></div>
+                <div class="form-group"><label>เวลาสิ้นสุด</label><select id="bkEnd" class="form-control" onchange="onEndTimeChanged(); triggerAutoCheckAvailability();" required></select></div>
               </div>
-              
+            </div>
+
+            <div id="liveAvailStatusBox" style="margin-top: 15px;"></div>
+
+            <!-- ผังโต๊ะเก้าอี้ -->
+            <div class="form-group" style="margin-top: 20px;">
+              <label style="font-weight: 700; color: var(--primary); margin-bottom: 8px; display: block;"><i class="bi bi-grid-3x3-gap"></i> รูปแบบการจัดโต๊ะและเก้าอี้ภายในห้องประชุม *</label>
+              <input type="hidden" id="bkSeatingLayout" value="แบบชั้นเรียน (Classroom)">
+              <div class="layout-grid" id="bookingLayoutGrid"></div>
+            </div>
+
+            <div class="form-grid" style="margin-top: 20px;">
+              <div class="form-group"><label>หัวข้อการประชุม / กิจกรรม *</label><input type="text" id="bkTopic" class="form-control" placeholder="เช่น ประชุมหัวหน้าส่วนราชการ ประจำเดือน" required></div>
+              <div class="form-group"><label>จำนวนผู้เข้าร่วม (คน) *</label><input type="number" id="bkParticipants" class="form-control" min="1" value="10" required></div>
               <div class="form-group">
-                <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">สถานะ</label>
-                <select id="searchStatus" class="form-control">
-                  <option value="">ทั้งหมด</option>
-                  <option value="รออนุมัติ">รออนุมัติ</option>
-                  <option value="อนุมัติ">อนุมัติ</option>
-                  <option value="ไม่อนุมัติ">ไม่อนุมัติ</option>
-                  <option value="ยกเลิก">ยกเลิก</option>
-                  <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+                <label>ลักษณะการประชุม</label>
+                <select id="bkMeetingType" class="form-control" onchange="onMeetingTypeChanged()">
+                  <option value="On-site">On-site (ประชุมในห้อง)</option>
+                  <option value="Online">Online (ระบบออนไลน์)</option>
+                  <option value="Hybrid">Hybrid (ผสมผสาน)</option>
                 </select>
               </div>
             </div>
 
-            <div style="display:flex; gap:10px; margin-bottom:20px;">
-              <button class="btn btn-primary" onclick="runBookingSearch()"><i class="bi bi-search"></i> ค้นหา</button>
-              <button class="btn btn-light" onclick="resetBookingSearch()"><i class="bi bi-eraser"></i> ล้างตัวกรอง</button>
+            <div class="form-grid" style="margin-top: 15px;">
+              <div class="form-group"><label>อุปกรณ์โสตทัศนูปกรณ์เพิ่มเติม</label><input type="text" id="bkEquipment" class="form-control" placeholder="เช่น ไมโครโฟนไร้สาย, โปรเจกเตอร์, ระบบประชุมทางไกล"></div>
+              <div class="form-group"><label>รายละเอียดเพิ่มเติม / หมายเหตุ</label><input type="text" id="bkDetail" class="form-control" placeholder="ต้องการอาหารว่าง 20 ชุด หรือความต้องการอื่นๆ"></div>
             </div>
 
+            <div style="margin-top: 25px; text-align: right;">
+              <button type="submit" class="btn btn-primary" id="btnSubmitBooking" style="padding: 12px 30px; font-size: 16px;"><i class="bi bi-check-circle"></i> ยืนยันการจองห้องประชุม</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- View: Approval -->
+      <section class="app-view" id="view-approval">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="bi bi-check2-square"></i> รายการรออนุมัติการใช้ห้องประชุม</div>
+            <button class="btn btn-outline btn-sm" onclick="loadApprovalViewData()"><i class="bi bi-arrow-clockwise"></i> รีเฟรชข้อมูล</button>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div style="flex-grow:1; min-width:240px;">
+              <input type="text" id="approvalSearchQuery" class="form-control" placeholder="🔍 ค้นหา (หัวข้อ, ผู้จอง, รหัส, กอง/สำนัก)..." oninput="filterApprovalTable()">
+            </div>
+            <div style="width:220px;">
+              <select id="approvalRoomFilter" class="form-control" onchange="filterApprovalTable()">
+                <option value="">ทุกห้องประชุม</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>รหัสจอง</th><th>วันที่ / เวลา</th><th>ห้องประชุม</th><th>หัวข้อการประชุม</th><th>ผู้จอง / หน่วยงาน</th><th>จำนวน</th><th>ดำเนินการพิจารณา</th></tr>
+              </thead>
+              <tbody id="standaloneApprovalBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Calendar -->
+      <section class="app-view" id="view-calendar">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><i class="bi bi-calendar3"></i> ตารางการใช้ห้องประชุมออนไลน์ (FullCalendar)</div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <select id="calendarRoomFilter" class="form-control" style="width: 200px;" onchange="loadCalendarEvents()"><option value="">ทุกห้องประชุม</option></select>
+              <button class="btn btn-outline btn-sm" onclick="loadCalendarEvents()"><i class="bi bi-arrow-clockwise"></i> รีเฟรช</button>
+            </div>
+          </div>
+          <div id="calendarLegend" style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; font-size: 13px;"></div>
+          <div id="fullCalendarEl" style="background: #fff; border-radius: 8px; padding: 10px;"></div>
+        </div>
+      </section>
+
+      <!-- View: Rooms Directory -->
+      <section class="app-view" id="view-rooms">
+        <div class="card-header" style="margin-bottom: 15px;"><div class="card-title"><i class="bi bi-door-open"></i> รายละเอียดห้องประชุมและสิ่งอำนวยความสะดวก</div></div>
+        <div id="roomsDirectoryGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;"></div>
+      </section>
+
+      <!-- View: My Bookings -->
+      <section class="app-view" id="view-mybookings">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="bi bi-journal-check"></i> รายการจองห้องประชุมของฉัน</div></div>
+          <div style="display: flex; gap: 10px; margin-bottom: 15px; max-width: 450px;">
+            <input type="email" id="myBookingEmailInput" class="form-control" placeholder="กรอกอีเมลของคุณเพื่อค้นหา...">
+            <button class="btn btn-primary" onclick="loadMyBookings()"><i class="bi bi-search"></i> ค้นหา</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>รหัสจอง</th><th>วันที่ / เวลา</th><th>ห้องประชุม</th><th>หัวข้อ</th><th>สถานะ</th><th>จัดการ</th></tr>
+              </thead>
+              <tbody id="myBookingsBody">
+                <tr><td colspan="6" style="text-align:center; color:var(--muted); padding:20px;">กรุณากรอกอีเมลหรือเข้าสู่ระบบเพื่อดูรายการจอง</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Stats & Search -->
+      <section class="app-view" id="view-stats">
+        <div class="card mb-4" style="background:#fff; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+          <div class="card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
+            <div class="card-title" style="font-size:16px; font-weight:700; color:#0f4c81;">
+              <i class="bi bi-search"></i> ค้นหารายการจองห้องประชุมทั้งหมด
+            </div>
+          </div>
+          
+          <div class="form-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; margin-bottom:16px;">
+            <div class="form-group">
+              <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">คำค้นหา</label>
+              <input type="text" id="searchQuery" class="form-control" placeholder="รหัส / ผู้จอง / หัวข้อ">
+            </div>
+            
+            <div class="form-group">
+              <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">ห้องประชุม</label>
+              <select id="searchRoom" class="form-control"><option value="">ทั้งหมด</option></select>
+            </div>
+            
+            <div class="form-group">
+              <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">วันที่ใช้งาน</label>
+              <input type="text" id="searchDate" class="form-control" placeholder="-- ทุกวันที่ --" readonly style="background:#fff; cursor:pointer;">
+            </div>
+            
+            <div class="form-group">
+              <label style="font-weight:600; font-size:13.5px; color:#475569; margin-bottom:6px; display:block;">สถานะ</label>
+              <select id="searchStatus" class="form-control">
+                <option value="">ทั้งหมด</option>
+                <option value="รออนุมัติ">รออนุมัติ</option>
+                <option value="อนุมัติ">อนุมัติ</option>
+                <option value="ไม่อนุมัติ">ไม่อนุมัติ</option>
+                <option value="ยกเลิก">ยกเลิก</option>
+                <option value="เสร็จสิ้น">เสร็จสิ้น</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; margin-bottom:20px;">
+            <button class="btn btn-primary" onclick="runBookingSearch()"><i class="bi bi-search"></i> ค้นหา</button>
+            <button class="btn btn-light" onclick="resetBookingSearch()"><i class="bi bi-eraser"></i> ล้างตัวกรอง</button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>รหัสจอง</th><th>วันที่</th><th>เวลา</th><th>ห้องประชุม</th><th>หัวข้อ</th><th>ผู้จอง / หน่วยงาน</th><th>สถานะ</th><th>จัดการ</th></tr>
+              </thead>
+              <tbody id="searchResultBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="background:#fff; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+          <div class="card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
+            <div class="card-title" style="font-size:16px; font-weight:700; color:#0f4c81;">
+              <i class="bi bi-pie-chart"></i> สัดส่วนสถานะการจองทั้งหมด
+            </div>
+          </div>
+          <div style="max-width:420px; margin:0 auto; position:relative;">
+            <canvas id="chartByStatus" height="220"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Admin Management -->
+      <section class="app-view" id="view-admin">
+        <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; border-bottom: 2px solid var(--border); padding-bottom: 12px;">
+          <button class="btn btn-primary btn-sm tab-btn active" onclick="switchAdminTab('approval', this)"><i class="bi bi-check2-square"></i> อนุมัติการจอง</button>
+          <button class="btn btn-outline btn-sm tab-btn" onclick="switchAdminTab('allbookings', this)"><i class="bi bi-journals"></i> จัดการรายการจองทั้งหมด</button>
+          <button class="btn btn-outline btn-sm tab-btn" onclick="switchAdminTab('rooms', this)"><i class="bi bi-door-open"></i> จัดการห้องประชุม</button>
+          <button class="btn btn-outline btn-sm tab-btn admin-only-tab" onclick="switchAdminTab('users', this)"><i class="bi bi-people"></i> จัดการผู้ใช้งาน</button>
+          <button class="btn btn-outline btn-sm tab-btn admin-only-tab" onclick="switchAdminTab('settings', this)"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</button>
+          <button class="btn btn-outline btn-sm tab-btn admin-only-tab" onclick="switchAdminTab('audit', this)"><i class="bi bi-shield-check"></i> ประวัติระบบ (Audit Log)</button>
+        </div>
+
+        <!-- Tab 1: Approval -->
+        <div class="tab-panel active" id="admin-tab-approval">
+          <div class="card">
+            <div class="card-header"><div class="card-title"><i class="bi bi-hourglass-split"></i> รายการรออนุมัติ</div><button class="btn btn-outline btn-sm" onclick="loadAdminBookings()"><i class="bi bi-arrow-clockwise"></i></button></div>
             <div class="table-wrap">
               <table>
-                <thead>
-                  <tr>
-                    <th>รหัสจอง</th>
-                    <th>วันที่</th>
-                    <th>เวลา</th>
-                    <th>ห้องประชุม</th>
-                    <th>หัวข้อ</th>
-                    <th>ผู้จอง / หน่วยงาน</th>
-                    <th>สถานะ</th>
-                    <th>จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody id="searchResultBody"></tbody>
+                <thead><tr><th>รหัส</th><th>วันที่ / เวลา</th><th>ห้อง</th><th>หัวข้อ</th><th>ผู้จอง</th><th>ผู้เข้าร่วม</th><th>พิจารณา</th></tr></thead>
+                <tbody id="adminApprovalBody"></tbody>
               </table>
             </div>
           </div>
+        </div>
 
-          <div class="card" style="background:#fff; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-            <div class="card-header" style="border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:16px;">
-              <div class="card-title" style="font-size:16px; font-weight:700; color:#0f4c81;">
-                <i class="bi bi-pie-chart"></i> สัดส่วนสถานะการจองทั้งหมด
-              </div>
-            </div>
-            <div style="max-width:420px; margin:0 auto; position:relative;">
-              <canvas id="chartByStatus" height="220"></canvas>
-            </div>
-          </div>
-        </section>
-
-        <!-- View: Booking -->
-        <section class="app-view" id="view-booking">
-          <!-- โครงสร้างส่วนตรวจสอบสถานะห้องว่างอัตโนมัติ (จัดวางวันที่ชิดขวาสุดอย่างสวยงาม) -->
-          <div class="card mb-4" style="padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
-              <div style="font-weight: 700; font-size: 16px; color: #0f4c81;">
-                <i class="bi bi-calendar-check"></i> 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน
-              </div>
-              
-              <!-- ช่องเลือกวันที่วางไว้ขวาสุด ออกแบบเป็นการ์ดเลือกวัน -->
-              <div style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <label for="availCheckDate" style="font-size: 13.5px; font-weight: 600; color: #475569; margin: 0; white-space: nowrap;">
-                  <i class="bi bi-calendar3"></i> วันที่ใช้งาน:
-                </label>
-                <input type="text" id="availCheckDate" class="form-control" style="background: #fff; cursor: pointer; width: 140px; text-align: center; font-weight: 600;" placeholder="-- เลือกวันที่ --" readonly>
-              </div>
-            </div>
-
-            <!-- แถวแสดงการ์ดห้องว่างรายวัน -->
-            <div id="roomAvailCards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
-              <div style="color:var(--muted); padding:10px 0;">กำลังโหลดสถานะห้องประชุม...</div>
-            </div>
-          </div>
-        </section>
-          
+        <!-- Tab 2: All Bookings -->
+        <div class="tab-panel" id="admin-tab-allbookings" style="display: none;">
           <div class="card">
-            <div class="card-header"><div class="card-title"><i class="bi bi-pencil-square"></i> 2. กรอกข้อมูลการจองและกำหนดรูปแบบห้องประชุม</div></div>
-            <form id="bookingForm" onsubmit="submitBookingForm(event)">
+            <div class="card-header"><div class="card-title"><i class="bi bi-journals"></i> รายการจองทั้งหมดในระบบ</div></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>รหัส</th><th>วันที่/เวลา</th><th>ห้อง</th><th>หัวข้อ</th><th>ผู้จอง</th><th>สถานะ</th><th>เปลี่ยนสถานะ</th></tr></thead>
+                <tbody id="adminAllBookingsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Rooms -->
+        <div class="tab-panel" id="admin-tab-rooms" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="bi bi-door-open"></i> จัดการข้อมูลห้องประชุม</div>
+              <button class="btn btn-primary btn-sm" onclick="openRoomModal()"><i class="bi bi-plus-lg"></i> เพิ่มห้องประชุม</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>รูปภาพ</th><th>รหัส</th><th>ชื่อห้อง</th><th>อาคาร/ชั้น</th><th>ความจุ</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+                <tbody id="adminRoomsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Users -->
+        <div class="tab-panel" id="admin-tab-users" style="display: none;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><i class="bi bi-people"></i> จัดการบัญชีผู้ใช้งาน</div>
+              <button class="btn btn-primary btn-sm" onclick="openUserModal()"><i class="bi bi-person-plus"></i> เพิ่มผู้ใช้งาน</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>อีเมล</th><th>ชื่อ-นามสกุล</th><th>กอง/สำนัก</th><th>สิทธิ์</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+                <tbody id="adminUsersBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 5: Settings -->
+        <div class="tab-panel" id="admin-tab-settings" style="display: none;">
+          <div class="card" style="max-width: 800px;">
+            <div class="card-header"><div class="card-title"><i class="bi bi-sliders"></i> ตั้งค่าพารามิเตอร์ระบบ</div></div>
+            <form onsubmit="submitAdminSettings(event)">
+              <div class="form-group mb-3"><label>ชื่อหน่วยงาน / องค์กร</label><input type="text" id="setOrgName" class="form-control" required></div>
+              <div class="form-group mb-3"><label>URL เว็บไซต์หลัก (Frontend URL บน GitHub Pages)</label><input type="url" id="setFrontendUrl" class="form-control" placeholder="https://smskcityservices.github.io/..."></div>
               <div class="form-grid">
-                <div class="form-group"><label>ชื่อผู้จอง <span class="req">*</span></label><input type="text" id="bkName" required></div>
-                <div class="form-group"><label>หน่วยงาน (กอง/สำนัก) <span class="req">*</span></label><select id="bkDept" required></select></div>
-                <div class="form-group"><label>เบอร์โทรศัพท์ติดต่อ <span class="req">*</span></label><input type="tel" id="bkPhone" required></div>
-                <div class="form-group"><label>อีเมลผู้ใช้งาน <span class="req">*</span></label><input type="email" id="bkEmail" required></div>
-                <div class="form-group"><label>ห้องประชุม <span class="req">*</span></label><select id="bkRoomId" required onchange="syncSelectedRoomCard(); triggerAutoCheckAvailability();"></select></div>
-                <div class="form-group"><label>วันที่ใช้งาน <span class="req">*</span></label><input type="date" id="bkDate" required onchange="syncDateFromForm(); triggerAutoCheckAvailability();"></div>
-                <div class="form-group full" style="background:#f8fafc; border:1px solid var(--border); border-radius:12px; padding:14px;">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-                    <label style="margin:0;"><i class="bi bi-clock-history"></i> กำหนดช่วงเวลาการใช้งาน <span class="req">*</span></label>
-                    <div id="bookingDurationText" class="duration-badge"><i class="bi bi-hourglass-split"></i> รวม 3 ชม. 30 นาที</div>
-                  </div>
-                  <div class="time-preset-wrap">
-                    <button type="button" class="time-preset-btn active" onclick="applyTimePreset('08:30','12:00',this)"><i class="bi bi-sun"></i> เช้า (08:30 - 12:00)</button>
-                    <button type="button" class="time-preset-btn" onclick="applyTimePreset('13:00','16:30',this)"><i class="bi bi-brightness-high"></i> บ่าย (13:00 - 16:30)</button>
-                    <button type="button" class="time-preset-btn" onclick="applyTimePreset('08:30','16:30',this)"><i class="bi bi-calendar-range"></i> เต็มวัน (08:30 - 16:30)</button>
-                    <button type="button" class="time-preset-btn" onclick="applyTimeDuration(60,this)"><i class="bi bi-stopwatch"></i> 1 ชม.</button>
-                    <button type="button" class="time-preset-btn" onclick="applyTimeDuration(120,this)"><i class="bi bi-stopwatch"></i> 2 ชม.</button>
-                  </div>
-                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                    <div><small style="color:var(--muted); font-weight:600;">เวลาเริ่มต้น</small><select id="bkStart" required onchange="onStartTimeChanged(); triggerAutoCheckAvailability();"></select></div>
-                    <div><small style="color:var(--muted); font-weight:600;">เวลาสิ้นสุด</small><select id="bkEnd" required onchange="onEndTimeChanged(); triggerAutoCheckAvailability();"></select></div>
-                  </div>
-                  <div id="liveAvailStatusBox"></div>
-                </div>
-                <div class="form-group full"><label>หัวข้อการประชุม / กิจกรรม <span class="req">*</span></label><input type="text" id="bkTopic" required></div>
-                <div class="form-group"><label>จำนวนผู้เข้าร่วม (คน) <span class="req">*</span></label><input type="number" id="bkParticipants" required min="1" placeholder="ระบุจำนวนผู้เข้าร่วม เช่น 10"></div>
-                <div class="form-group"><label>รูปแบบการประชุม <span class="req">*</span></label><select id="bkMeetingType" required onchange="onMeetingTypeChanged()"><option value="On-site">On-site (ประชุม ณ ห้องประชุม)</option><option value="Online">Online (ประชุมออนไลน์)</option><option value="Hybrid">Hybrid (ผสมผสาน On-site + Online)</option></select></div>
-                <div class="form-group full" style="border-top:1px dashed var(--border); padding-top:14px;">
-                  <label><i class="bi bi-grid-3x3-gap"></i> รูปแบบการจัดโต๊ะเก้าอี้ห้องประชุม <span class="req">*</span></label>
-                  <input type="hidden" id="bkSeatingLayout" required value="แบบชั้นเรียน (Classroom)">
-                  <div class="layout-grid" id="bookingLayoutGrid"></div>
-                </div>
-                <div class="form-group full"><label>อุปกรณ์ที่ต้องการเพิ่มเติม</label><input type="text" id="bkEquipment" placeholder="เช่น ไมโครโฟนตั้งโต๊ะ 6 ตัว, สายต่อ HDMI, กระดานฟลิปชาร์ท"></div>
-                <div class="form-group full"><label>รายละเอียดเพิ่มเติม / ข้อความถึงผู้ดูแล</label><textarea id="bkDetail" rows="2" placeholder="ระบุรายละเอียดเพิ่มเติม เช่น การจัดเตรียมเครื่องดื่ม หรืออาหารว่าง (ถ้ามี)"></textarea></div>
+                <div class="form-group"><label>เวลาเปิดทำการ</label><input type="time" id="setOpenHour" class="form-control" required></div>
+                <div class="form-group"><label>เวลาปิดทำการ</label><input type="time" id="setCloseHour" class="form-control" required></div>
               </div>
-              <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:18px;">
-        <button type="submit" class="btn btn-primary" id="btnSubmitBooking" style="padding:11px 24px;">
-          <i class="bi bi-card-checklist"></i> ตรวจสอบและยืนยันการจอง
-        </button>
-      </div>
+              <div class="form-grid" style="margin-top:15px;">
+                <div class="form-group"><label>ต้องอนุมัติการจองหรือไม่</label><select id="setRequireApproval" class="form-control"><option value="TRUE">TRUE (ต้องอนุมัติ)</option><option value="FALSE">FALSE (อนุมัติอัตโนมัติ)</option></select></div>
+                <div class="form-group"><label>ซิงค์ Google Calendar</label><select id="setCalendarSync" class="form-control"><option value="TRUE">TRUE (เปิด)</option><option value="FALSE">FALSE (ปิด)</option></select></div>
+              </div>
+              <div class="form-grid" style="margin-top:15px;">
+                <div class="form-group"><label>แจ้งเตือนล่วงหน้า 1 วัน</label><select id="setRemind1D" class="form-control"><option value="TRUE">TRUE</option><option value="FALSE">FALSE</option></select></div>
+                <div class="form-group"><label>แจ้งเตือนล่วงหน้า 2 ชั่วโมง</label><select id="setRemind2H" class="form-control"><option value="TRUE">TRUE</option><option value="FALSE">FALSE</option></select></div>
+                <div class="form-group"><label>แจ้งเตือนล่วงหน้า 30 นาที</label><select id="setRemind30M" class="form-control"><option value="TRUE">TRUE</option><option value="FALSE">FALSE</option></select></div>
+              </div>
+              <div style="margin-top:20px;"><button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> บันทึกการตั้งค่า</button></div>
             </form>
           </div>
-        </section>
-
-       <!-- View: Approval Management -->
-<section class="app-view" id="view-approval">
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title"><i class="bi bi-check2-square"></i> รายการรออนุมัติการใช้ห้องประชุม</div>
-      <button class="btn btn-outline btn-sm" onclick="loadApprovalViewData()"><i class="bi bi-arrow-clockwise"></i> รีเฟรชข้อมูล</button>
-    </div>
-
-    <!-- 🔍 เพิ่มช่องค้นหาแบบ Live Search และตัวกรอง -->
-    <div style="display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
-      <div style="flex:1; min-width:220px;">
-        <input type="text" id="approvalSearchQuery" placeholder="🔍 ค้นหา (หัวข้อ, ผู้จอง, รหัส, กอง/สำนัก)..." oninput="filterApprovalTable()">
-      </div>
-      <div style="width:200px;">
-        <select id="approvalRoomFilter" onchange="filterApprovalTable()">
-          <option value="">ทุกห้องประชุม</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>รหัสจอง</th><th>วันที่ / เวลา</th><th>ห้องประชุม</th><th>หัวข้อการประชุม</th><th>ผู้จอง / หน่วยงาน</th><th>จำนวน</th><th>ดำเนินการพิจารณา</th>
-          </tr>
-        </thead>
-        <tbody id="standaloneApprovalBody">
-          <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">กำลังโหลดรายการรออนุมัติ...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-        <!-- View: Rooms -->
-        <section class="app-view" id="view-rooms"><div class="card"><div class="card-header"><div class="card-title"><i class="bi bi-door-open"></i> ข้อมูลห้องประชุมทั้งหมด</div></div><div class="grid-3" id="roomsDirectoryGrid"></div></div></section>
-
-        <!-- View: My Bookings -->
-        <section class="app-view" id="view-mybookings">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title"><i class="bi bi-journal-check"></i> รายการจองของฉัน</div>
-              <div style="display:flex; gap:8px; flex-wrap:wrap;"><input type="email" id="myBookingEmailInput" placeholder="ระบุอีเมล" style="width:240px;"><button class="btn btn-primary btn-sm" onclick="loadMyBookings()"><i class="bi bi-search"></i> ค้นหา</button></div>
-            </div>
-            <div class="table-wrap"><table><thead><tr><th>รหัสจอง</th><th>วันที่ / เวลา</th><th>ห้องประชุม</th><th>หัวข้อการประชุม</th><th>สถานะ</th><th>ดำเนินการ</th></tr></thead><tbody id="myBookingsBody"></tbody></table></div>
-          </div>
-        </section>
-
-        <!-- View: Calendar -->
-        <section class="app-view" id="view-calendar">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title"><i class="bi bi-calendar3"></i> ปฏิทินการใช้ห้องประชุม</div>
-              <div style="display:flex; gap:10px;"><select id="calendarRoomFilter" style="width:auto;" onchange="loadCalendarEvents()"><option value="">แสดงทุกห้องประชุม</option></select><button class="btn btn-outline btn-sm" onclick="loadCalendarEvents()"><i class="bi bi-arrow-clockwise"></i> รีเฟรช</button></div>
-            </div>
-            <div class="legend-wrap" id="calendarLegend"></div>
-            <div id="fullCalendarEl"></div>
-          </div>
-        </section>
-
-        <!-- View: Admin -->
-        <section class="app-view" id="view-admin">
-          <div class="card">
-            <div class="tabs">
-              <button class="tab-btn active" onclick="switchAdminTab('approval', this)">อนุมัติการจอง</button>
-              <button class="tab-btn" onclick="switchAdminTab('allbookings', this)">จัดการการจองทั้งหมด</button>
-              <button class="tab-btn admin-only-tab" onclick="switchAdminTab('rooms', this)">จัดการห้องประชุม</button>
-              <button class="tab-btn admin-only-tab" onclick="switchAdminTab('users', this)">ผู้ใช้งาน &amp; สิทธิ์</button>
-              <button class="tab-btn admin-only-tab" onclick="switchAdminTab('settings', this)">ตั้งค่าระบบ</button>
-              <button class="tab-btn admin-only-tab" onclick="switchAdminTab('audit', this)">Audit Log</button>
-            </div>
-            <div class="tab-panel active" id="admin-tab-approval"><div class="table-wrap"><table><thead><tr><th>รหัส</th><th>วันเวลา</th><th>ห้อง</th><th>หัวข้อ</th><th>ผู้จอง</th><th>จำนวน</th><th>ดำเนินการ</th></tr></thead><tbody id="adminApprovalBody"></tbody></table></div></div>
-            <div class="tab-panel" id="admin-tab-allbookings"><div class="table-wrap"><table><thead><tr><th>รหัส</th><th>วันเวลา</th><th>ห้อง</th><th>หัวข้อ</th><th>ผู้จอง</th><th>สถานะ</th><th>เปลี่ยนสถานะ</th></tr></thead><tbody id="adminAllBookingsBody"></tbody></table></div></div>
-            <div class="tab-panel" id="admin-tab-rooms"><div style="display:flex; justify-content:flex-end; margin-bottom:12px;"><button class="btn btn-primary btn-sm" onclick="openRoomModal()"><i class="bi bi-plus-lg"></i> เพิ่มห้องใหม่</button></div><div class="table-wrap"><table><thead><tr><th>รูป</th><th>รหัส</th><th>ชื่อห้อง</th><th>อาคาร / ชั้น</th><th>ความจุ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody id="adminRoomsBody"></tbody></table></div></div>
-            <div class="tab-panel" id="admin-tab-users"><div style="display:flex; justify-content:flex-end; margin-bottom:12px;"><button class="btn btn-primary btn-sm" onclick="openUserModal()"><i class="bi bi-person-plus"></i> เพิ่มผู้ใช้</button></div><div class="table-wrap"><table><thead><tr><th>อีเมล</th><th>ชื่อ-นามสกุล</th><th>หน่วยงาน</th><th>สิทธิ์</th><th>สถานะบัญชี</th><th>จัดการ</th></tr></thead><tbody id="adminUsersBody"></tbody></table></div></div>
-            <div class="tab-panel" id="admin-tab-settings">
-              <form id="adminSettingsForm" onsubmit="submitAdminSettings(event)" class="form-grid" style="max-width:740px;">
-                <div class="form-group full"><label>ชื่อหน่วยงาน</label><input type="text" id="setOrgName" required></div>
-                <div class="form-group full">
-  <label>URL เว็บไซต์หลัก (GitHub Pages สำหรับลิงก์ใน Email &amp; QR Code)</label>
-  <input type="url" id="setFrontendUrl" placeholder="https://username.github.io/repo-name/">
-</div>
-                <div class="form-group"><label>เวลาเปิดให้จอง</label><input type="time" id="setOpenHour" required></div>
-                <div class="form-group"><label>เวลาปิดให้จอง</label><input type="time" id="setCloseHour" required></div>
-                <div class="form-group"><label>ระบบอนุมัติ (Approval)</label><select id="setRequireApproval"><option value="TRUE">เปิดใช้งาน (ต้องรออนุมัติ)</option><option value="FALSE">ปิดใช้งาน (อนุมัติทันที)</option></select></div>
-                <div class="form-group"><label>ซิงค์ Google Calendar</label><select id="setCalendarSync"><option value="TRUE">เปิดใช้งาน</option><option value="FALSE">ปิดใช้งาน</option></select></div>
-                <div class="form-group"><label>Google Chat Webhook</label><select id="setChatNotify"><option value="TRUE">เปิดใช้งาน</option><option value="FALSE">ปิดใช้งาน</option></select></div>
-                <div class="form-group"><label>Email เตือนก่อน 1 วัน</label><select id="setRemind1D"><option value="TRUE">เปิดใช้งาน</option><option value="FALSE">ปิดใช้งาน</option></select></div>
-                <div class="form-group"><label>Email เตือนก่อน 2 ชม.</label><select id="setRemind2H"><option value="TRUE">เปิดใช้งาน</option><option value="FALSE">ปิดใช้งาน</option></select></div>
-                <div class="form-group"><label>Email เตือนก่อน 30 นาที</label><select id="setRemind30M"><option value="TRUE">เปิดใช้งาน</option><option value="FALSE">ปิดใช้งาน</option></select></div>
-                <!-- แทรกเพิ่มเข้าไปในฟอร์มตั้งค่าระบบ (Admin Settings Form) -->
-<div style="margin-top: 25px; border-top: 2px dashed #e2e8f0; padding-top: 20px;">
-  <h3 style="font-size: 16px; color: var(--primary); margin-bottom: 15px;"><i class="bi bi-shield-lock"></i> ตั้งค่าระบบขั้นสูง & การเชื่อมต่อภายนอก</h3>
-  
-  <div class="form-group mb-3">
-    <label class="form-label">Google Spreadsheet ID (ฐานข้อมูลหลัก)</label>
-    <input type="text" id="setSpreadsheetId" class="form-control" placeholder="เช่น 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms">
-    <small class="text-muted">รหัส ID จากลิงก์ Google Sheets ของระบบ</small>
-  </div>
-
-  <div class="form-group mb-3">
-    <label class="form-label">Google Calendar ID (สำหรับซิงค์ปฏิทิน)</label>
-    <input type="text" id="setCalendarId" class="form-control" placeholder="เช่น primary หรืออีเมลปฏิทิน">
-  </div>
-
-  <div class="form-group mb-3">
-    <label class="form-label">Google Drive Folder ID (สำหรับเก็บรูปภาพห้องประชุม)</label>
-    <input type="text" id="setDriveFolderId" class="form-control" placeholder="รหัสโฟลเดอร์ใน Google Drive">
-  </div>
-
-  <div class="form-group mb-3">
-    <label class="form-label">Google Chat Webhook URL (สำหรับการแจ้งเตือนผ่าน Chat)</label>
-    <input type="text" id="setChatWebhookUrl" class="form-control" placeholder="https://chat.googleapis.com/v1/spaces/...">
-  </div>
-
-  <div class="form-group mb-3">
-    <label class="form-label">Admin Notify Email (อีเมลผู้ดูแลรับแจ้งเตือนสำรอง)</label>
-    <input type="email" id="setAdminNotifyEmail" class="form-control" placeholder="admin@example.com">
-  </div>
-</div>
-                <div class="form-group full"><button type="submit" class="btn btn-primary" style="width:fit-content;"><i class="bi bi-save"></i> บันทึกการตั้งค่า</button></div>
-              </form>
-            </div>
-            <div class="tab-panel" id="admin-tab-audit"><div class="table-wrap"><table><thead><tr><th>วันเวลา</th><th>ผู้ดำเนินการ</th><th>สิทธิ์</th><th>กิจกรรม</th><th>เป้าหมาย</th><th>รายละเอียด</th></tr></thead><tbody id="adminAuditBody"></tbody></table></div></div>
-          </div>
-        </section>
-      <!-- ==========================================================
-     KIOSK VIEW (หน้าจอแสดงผลสถานะห้องหน้าห้องประชุม / จอใหญ่)
-     ========================================================== -->
-<div id="view-kiosk" class="app-view" style="display:none;">
-  <div class="kiosk-container" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 9999; overflow-y: auto; padding: 25px 40px; color: #fff; box-sizing: border-box;">
-    
-    <!-- Header Kiosk -->
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-bottom: 25px;">
-      <div>
-        <h1 id="kioskOrgName" style="font-size: 26px; font-weight: 700; margin: 0; color: #38bdf8;">เทศบาลเมืองสมุทรสงคราม</h1>
-        <p style="font-size: 14px; color: #94a3b8; margin: 4px 0 0 0;"><i class="bi bi-display"></i> ระบบแสดงสถานะห้องประชุมออนไลน์ (Kiosk Mode)</p>
-      </div>
-      <div style="text-align: right; display: flex; align-items: center; gap: 20px;">
-        <div>
-          <div id="kioskClock" style="font-size: 32px; font-weight: 700; font-family: monospace; color: #f8fafc; letter-spacing: 1px;">00:00:00</div>
-          <div id="kioskDate" style="font-size: 14px; color: #cbd5e1; text-align: right;">-</div>
         </div>
-        <!-- ปุ่มกดออกหน้าจอ Kiosk กลับสู่หน้าหลัก -->
-        <button onclick="navigateTo('dashboard')" class="btn btn-outline btn-sm" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid #64748b; padding: 8px 14px; border-radius: 8px; cursor: pointer;" title="ออกจากโหมด Kiosk">
-          <i class="bi bi-box-arrow-right"></i> ออกจากหน้าจอ
-        </button>
-      </div>
-    </div>
 
-    <!-- Grid แสดงห้องประชุมทั้งหมด -->
-    <div id="kioskRoomGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 24px;">
-      <!-- ข้อมูลห้องจะถูกเรนเดอร์แทรกตรงนี้ด้วย JavaScript -->
-    </div>
+        <!-- Tab 6: Audit Log -->
+        <div class="tab-panel" id="admin-tab-audit" style="display: none;">
+          <div class="card">
+            <div class="card-header"><div class="card-title"><i class="bi bi-shield-check"></i> ประวัติการใช้งานระบบ (Audit Log)</div><button class="btn btn-outline btn-sm" onclick="loadAdminAudit()"><i class="bi bi-arrow-clockwise"></i></button></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>เวลา</th><th>ผู้ใช้งาน</th><th>สิทธิ์</th><th>การกระทำ</th><th>เป้าหมาย</th><th>รายละเอียด</th></tr></thead>
+                <tbody id="adminAuditBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <!-- Footer Kiosk -->
-    <div style="margin-top: 40px; text-align: center; color: #64748b; font-size: 13px; border-top: 1px solid #1e293b; padding-top: 15px;">
-      ระบบอัปเดตข้อมูลอัตโนมัติทุกๆ 30 วินาที &bull; เทศบาลเมืองสมุทรสงคราม
-    </div>
+      <!-- View: Kiosk Mode (จอแสดงผลหน้าห้องประชุมแบบเต็มจอ) -->
+      <section class="app-view" id="view-kiosk">
+        <div class="kiosk-container" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 9999; overflow-y: auto; padding: 25px 40px; color: #fff; box-sizing: border-box;">
+          
+          <!-- Kiosk Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-bottom: 25px;">
+            <div>
+              <h1 id="kioskOrgName" style="font-size: 26px; font-weight: 700; margin: 0; color: #38bdf8;">เทศบาลเมืองสมุทรสงคราม</h1>
+              <p style="font-size: 14px; color: #94a3b8; margin: 4px 0 0 0;"><i class="bi bi-display"></i> ระบบแสดงสถานะห้องประชุมออนไลน์ (Kiosk Mode)</p>
+            </div>
+            <div style="text-align: right; display: flex; align-items: center; gap: 20px;">
+              <div>
+                <div id="kioskClock" style="font-size: 32px; font-weight: 700; font-family: monospace; color: #f8fafc; letter-spacing: 1px;">00:00:00</div>
+                <div id="kioskDate" style="font-size: 14px; color: #cbd5e1; text-align: right;">-</div>
+              </div>
+              <button onclick="navigateTo('dashboard')" class="btn btn-outline btn-sm" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid #64748b; padding: 8px 14px; border-radius: 8px; cursor: pointer;" title="ออกจากโหมด Kiosk">
+                <i class="bi bi-box-arrow-right"></i> ออกจากหน้าจอ
+              </button>
+            </div>
+          </div>
 
+          <!-- Kiosk Rooms Grid -->
+          <div id="kioskRoomGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 24px;"></div>
+
+          <!-- Kiosk Footer -->
+          <div style="margin-top: 40px; text-align: center; color: #64748b; font-size: 13px; border-top: 1px solid #1e293b; padding-top: 15px;">
+            ระบบอัปเดตข้อมูลอัตโนมัติทุกๆ 30 วินาที &bull; เทศบาลเมืองสมุทรสงคราม
+          </div>
+
+        </div>
+      </section>
+
+    </div>
   </div>
-</div>
-      </main>
-    </div>
-  </div>
 
-  <!-- Mobile Bottom Nav -->
-  <nav class="mobile-bottom-nav">
-    <button class="mobile-bottom-btn active" data-view="dashboard" onclick="navigateTo('dashboard')"><i class="bi bi-speedometer2"></i><span>ภาพรวม</span></button>
-    <button class="mobile-bottom-btn" data-view="rooms" onclick="navigateTo('rooms')"><i class="bi bi-door-open"></i><span>ห้องประชุม</span></button>
-    <button class="mobile-bottom-btn auth-required-mobile" data-view="calendar" onclick="navigateTo('calendar')" style="display:none;"><i class="bi bi-calendar3"></i><span>ปฏิทิน</span></button>
-    <button class="mobile-bottom-btn auth-required-mobile" data-view="mybookings" onclick="navigateTo('mybookings')" style="display:none;"><i class="bi bi-journal-check"></i><span>ของฉัน</span></button>
-    <button type="button" class="mobile-bottom-btn" data-view="kiosk" onclick="navigateTo('kiosk')">
-  <i class="bi bi-display"></i>
-  <span>Kiosk</span>
-</button>
-  </nav>
-
-  <!-- Modals -->
+  <!-- Modal: Login / Register -->
   <div class="modal-backdrop" id="loginModal">
-    <div class="modal-box" style="max-width:440px;">
-      <div class="modal-header"><h3><i class="bi bi-shield-lock-fill"></i> เข้าสู่ระบบบุคลากร</h3><button class="modal-close" onclick="closeModal('loginModal')">&times;</button></div>
-      <div class="modal-body">
-        <div class="tabs"><button class="tab-btn active" id="authTabLogin" onclick="switchAuthTab('login')">เข้าสู่ระบบ</button><button class="tab-btn" id="authTabRegister" onclick="switchAuthTab('register')">ลงทะเบียนใหม่</button></div>
-        <form id="loginForm" onsubmit="submitLogin(event)">
-          <div class="form-group" style="margin-bottom:12px;"><label>อีเมล <span class="req">*</span></label><input type="email" id="loginEmail" required></div>
-          <div class="form-group" style="margin-bottom:16px;"><label>รหัสผ่าน / PIN <span class="req">*</span></label><input type="password" id="loginPass" required></div>
-          <button type="submit" class="btn btn-primary" id="btnLoginSubmit" style="width:100%;">ยืนยันการเข้าสู่ระบบ</button>
-          <!-- เส้นคั่นตัวเลือกเข้าสู่ระบบ -->
-        <div style="display:flex; align-items:center; margin:16px 0; gap:10px;">
-          <div style="flex:1; height:1px; background:#e2e8f0;"></div>
-          <span style="font-size:12px; color:var(--muted);">หรือเข้าใช้งานด้วย</span>
-          <div style="flex:1; height:1px; background:#e2e8f0;"></div>
-        </div>
-
-        <!-- ปุ่ม Google Sign-In อย่างเป็นทางการ -->
-        <div id="googleSignInBtn" style="display:flex; justify-content:center; min-height:44px;"></div>
-        </form>
-        <form id="registerForm" onsubmit="submitRegister(event)" style="display:none;">
-          <div class="form-group" style="margin-bottom:10px;"><label>ชื่อ-นามสกุล <span class="req">*</span></label><input type="text" id="regName" required></div>
-          <div class="form-group" style="margin-bottom:10px;"><label>หน่วยงาน (กอง/สำนัก) <span class="req">*</span></label><select id="regDept" required></select></div>
-          <div class="form-group" style="margin-bottom:10px;"><label>เบอร์โทรศัพท์ <span class="req">*</span></label><input type="tel" id="regPhone" required></div>
-          <div class="form-group" style="margin-bottom:10px;"><label>อีเมล <span class="req">*</span></label><input type="email" id="regEmail" required></div>
-          <div class="form-group" style="margin-bottom:16px;"><label>กำหนดรหัสผ่าน / PIN <span class="req">*</span></label><input type="password" id="regPass" required minlength="4"></div>
-          <button type="submit" class="btn btn-primary" id="btnRegSubmit" style="width:100%;">ลงทะเบียน (รอ Admin อนุมัติ)</button>
-        </form>
+    <div class="modal-box" style="max-width: 440px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 18px; color: var(--primary); font-weight: 700;"><i class="bi bi-lock"></i> เข้าสู่ระบบบุคลากร / ลงทะเบียน</h3>
+        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('loginModal')"><i class="bi bi-x-lg"></i></button>
       </div>
+      
+      <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px;">
+        <button type="button" class="btn btn-primary btn-sm" id="authTabLogin" onclick="switchAuthTab('login')">เข้าสู่ระบบ</button>
+        <button type="button" class="btn btn-outline btn-sm" id="authTabRegister" onclick="switchAuthTab('register')">ลงทะเบียนใหม่</button>
+      </div>
+
+      <!-- Google Sign-In Button -->
+      <div style="margin-bottom: 20px; display: flex; justify-content: center;">
+        <div id="googleSignInBtn"></div>
+      </div>
+      <div style="text-align: center; color: var(--muted); font-size: 13px; margin-bottom: 15px; position: relative;">
+        <span style="background: #fff; padding: 0 10px; position: relative; z-index: 1;">หรือใช้อีเมลและรหัสผ่าน</span>
+        <hr style="position: absolute; top: 50%; left: 0; right: 0; border: none; border-top: 1px solid var(--border); z-index: 0;">
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="submitLogin(event)">
+        <div class="form-group mb-3"><label>อีเมลองค์กร / ส่วนราชการ</label><input type="email" id="loginEmail" class="form-control" placeholder="name@samutprakan.go.th" required></div>
+        <div class="form-group mb-3"><label>รหัสผ่าน / PIN</label><input type="password" id="loginPass" class="form-control" placeholder="รหัสผ่านของคุณ" required></div>
+        <div style="margin-top: 20px;"><button type="submit" class="btn btn-primary" id="btnLoginSubmit" style="width: 100%;">เข้าสู่ระบบ</button></div>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" onsubmit="submitRegister(event)" style="display: none;">
+        <div class="form-group mb-3"><label>ชื่อ-นามสกุล *</label><input type="text" id="regName" class="form-control" placeholder="นายสมชาย ใจดี" required></div>
+        <div class="form-group mb-3"><label>กอง / สำนัก *</label><select id="regDept" class="form-control" required></select></div>
+        <div class="form-group mb-3"><label>เบอร์โทรศัพท์ติดต่อ *</label><input type="tel" id="regPhone" class="form-control" placeholder="0812345678" required></div>
+        <div class="form-group mb-3"><label>อีเมล *</label><input type="email" id="regEmail" class="form-control" placeholder="name@domain.com" required></div>
+        <div class="form-group mb-3"><label>ตั้งรหัสผ่าน / PIN (อย่างน้อย 4 ตัวอักษร) *</label><input type="password" id="regPass" class="form-control" placeholder="รหัสผ่านสำหรับเข้าสู่ระบบ" required></div>
+        <div style="margin-top: 20px;"><button type="submit" class="btn btn-success" id="btnRegSubmit" style="width: 100%;">ลงทะเบียนบัญชี</button></div>
+      </form>
     </div>
   </div>
 
+  <!-- Modal: Profile Management -->
   <div class="modal-backdrop" id="profileModal">
-    <div class="modal-box" style="max-width:440px;">
-      <div class="modal-header"><h3><i class="bi bi-person-lines-fill"></i> โปรไฟล์ส่วนตัว</h3><button class="modal-close" onclick="closeModal('profileModal')">&times;</button></div>
-      <form id="profileForm" onsubmit="submitProfileUpdate(event)">
-        <div class="modal-body">
-          <div class="form-group" style="margin-bottom:10px;"><label>อีเมล</label><input type="email" id="profEmail" readonly style="background:#f1f5f9;"></div>
-          <div class="form-group" style="margin-bottom:10px;"><label>ชื่อ-นามสกุล <span class="req">*</span></label><input type="text" id="profName" required></div>
-          <div class="form-group" style="margin-bottom:10px;"><label>หน่วยงาน <span class="req">*</span></label><select id="profDept" required></select></div>
-          <div class="form-group" style="margin-bottom:10px;"><label>เบอร์โทรศัพท์เริ่มต้น <span class="req">*</span></label><input type="tel" id="profPhone" required></div>
-          <div class="form-group"><label>เปลี่ยนรหัสผ่านใหม่ (ไม่บังคับ)</label><input type="password" id="profPass"></div>
+    <div class="modal-box" style="max-width: 480px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 18px; color: var(--primary); font-weight: 700;"><i class="bi bi-person-gear"></i> โปรไฟล์และตั้งค่าส่วนตัว</h3>
+        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('profileModal')"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <form onsubmit="submitProfileUpdate(event)">
+        <div class="form-group mb-3"><label>อีเมล (ไม่สามารถเปลี่ยนได้)</label><input type="email" id="profEmail" class="form-control" disabled style="background:#f1f5f9;"></div>
+        <div class="form-group mb-3"><label>ชื่อ-นามสกุล</label><input type="text" id="profName" class="form-control" required></div>
+        <div class="form-group mb-3"><label>กอง / สำนัก</label><select id="profDept" class="form-control" required></select></div>
+        <div class="form-group mb-3"><label>เบอร์โทรศัพท์ติดต่อ</label><input type="tel" id="profPhone" class="form-control"></div>
+        <div class="form-group mb-3"><label>เปลี่ยนรหัสผ่านใหม่ (ปล่อยว่างไว้ถ้าไม่เปลี่ยน)</label><input type="password" id="profPass" class="form-control" placeholder="อย่างน้อย 4 ตัวอักษร"></div>
+        
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-weight: 600; font-size: 13.5px;">สถานะการผูก Google Account</span>
+            <span id="profGoogleBadge" class="badge">รอตรวจสอบ</span>
+          </div>
+          <div id="profGoogleActionWrap"></div>
         </div>
-        <div class="form-group" style="background:#f8fafc; border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:12px;">
-          <label style="margin:0 0 4px; display:flex; justify-content:space-between; align-items:center;">
-            <span><i class="bi bi-google"></i> บัญชี Google ที่ผูกไว้</span>
-            <span id="profGoogleBadge" class="badge badge-cancelled">ยังไม่ผูก</span>
-          </label>
-          <div id="profGoogleActionWrap" style="margin-top:6px;"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-danger btn-sm" onclick="handleLogout()"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save"></i> บันทึกการเปลี่ยนแปลง</button>
         </div>
-        <div class="modal-footer"><button type="button" class="btn btn-light" onclick="closeModal('profileModal')">ยกเลิก</button><button type="submit" class="btn btn-primary">บันทึก</button></div>
       </form>
     </div>
   </div>
 
+  <!-- Modal: Booking Detail & QR Code -->
   <div class="modal-backdrop" id="detailModal">
-    <div class="modal-box"><div class="modal-header"><h3><i class="bi bi-qr-code-scan"></i> รายละเอียดการจอง</h3><button class="modal-close" onclick="closeModal('detailModal')">&times;</button></div><div class="modal-body" id="detailModalBody"></div><div class="modal-footer"><button type="button" class="btn btn-light" onclick="closeModal('detailModal')">ปิด</button></div></div>
+    <div class="modal-box" style="max-width: 500px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="font-size: 18px; color: var(--primary); font-weight: 700;"><i class="bi bi-file-earmark-text"></i> รายละเอียดการจองห้องประชุม</h3>
+        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('detailModal')"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div id="detailModalBody"></div>
+    </div>
   </div>
 
+  <!-- Modal: Room Add/Edit (Admin) -->
+  <div class="modal-backdrop" id="roomModal">
+    <div class="modal-box" style="max-width: 550px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 id="roomModalTitle" style="font-size: 18px; color: var(--primary); font-weight: 700;">จัดการห้องประชุม</h3>
+        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('roomModal')"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <form id="roomForm" onsubmit="submitRoomForm(event)">
+        <input type="hidden" id="rmId">
+        <div class="form-grid">
+          <div class="form-group"><label>ชื่อห้องประชุม *</label><input type="text" id="rmName" class="form-control" required></div>
+          <div class="form-group"><label>อาคาร *</label><input type="text" id="rmBuilding" class="form-control" required></div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group"><label>ชั้น *</label><input type="text" id="rmFloor" class="form-control" required></div>
+          <div class="form-group"><label>ความจุ (คน) *</label><input type="number" id="rmCapacity" class="form-control" min="1" required></div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group"><label>สถานะห้อง</label><select id="rmStatus" class="form-control"><option value="Active">Active (เปิดใช้งาน)</option><option value="Maintenance">Maintenance (ปิดปรับปรุง)</option></select></div>
+          <div class="form-group"><label>ผู้รับผิดชอบ</label><input type="text" id="rmResponsible" class="form-control"></div>
+        </div>
+        <div class="form-group mb-3"><label>สีประจำห้อง (สำหรับปฏิทิน)</label><input type="color" id="rmColor" class="form-control" value="#0284c7" style="height: 40px; padding: 2px;"></div>
+        <div class="form-group mb-3"><label>อุปกรณ์ภายในห้อง</label><input type="text" id="rmEquipment" class="form-control" placeholder="โปรเจกเตอร์, ไมโครโฟน, แอร์"></div>
+        <div class="form-group mb-3"><label>รายละเอียดเพิ่มเติม</label><textarea id="rmDesc" class="form-control" rows="2"></textarea></div>
+        
+        <div class="form-group mb-3">
+          <label>รูปภาพห้องประชุม (อัปโหลดหรือระบุ URL)</label>
+          <input type="file" id="rmImageFile" class="form-control mb-2" accept="image/*" onchange="handleRoomImageSelect(event)">
+          <input type="text" id="rmImageUrl" class="form-control" placeholder="หรือวางลิงก์รูปภาพ (Image URL)">
+          <div id="rmPreviewWrap" style="margin-top: 10px; display: none;">
+            <img id="rmPreviewImg" src="" style="width: 120px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border);">
+          </div>
+        </div>
+
+        <div style="text-align: right; margin-top: 20px;"><button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> บันทึกข้อมูลห้อง</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: User Add/Edit (Admin) -->
+  <div class="modal-backdrop" id="userModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="font-size: 18px; color: var(--primary); font-weight: 700;">จัดการบัญชีผู้ใช้งาน</h3>
+        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('userModal')"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <form id="userForm" onsubmit="submitUserForm(event)">
+        <div class="form-group mb-3"><label>อีเมล *</label><input type="email" id="usrEmail" class="form-control" required></div>
+        <div class="form-group mb-3"><label>ชื่อ-นามสกุล *</label><input type="text" id="usrName" class="form-control" required></div>
+        <div class="form-group mb-3"><label>กอง/สำนัก *</label><select id="usrDept" class="form-control" required></select></div>
+        <div class="form-group mb-3"><label>เบอร์โทรศัพท์</label><input type="tel" id="usrPhone" class="form-control"></div>
+        <div class="form-grid">
+          <div class="form-group"><label>สิทธิ์ระบบ (Role)</label><select id="usrRole" class="form-control"><option value="User">User</option><option value="Approver">Approver</option><option value="Admin">Admin</option></select></div>
+          <div class="form-group"><label>สถานะบัญชี</label><select id="usrStatus" class="form-control"><option value="Active">Active</option><option value="รออนุมัติ">รออนุมัติ</option><option value="ไม่อนุมัติ">ไม่อนุมัติ</option><option value="Inactive">Inactive</option></select></div>
+        </div>
+        <div class="form-group mb-3" style="margin-top: 15px;"><label>รหัสผ่าน / PIN ใหม่ (ถ้าต้องการเปลี่ยน)</label><input type="password" id="usrPasscode" class="form-control" placeholder="ปล่อยว่างไว้ถ้าไม่เปลี่ยน"></div>
+        <div style="text-align: right; margin-top: 20px;"><button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> บันทึกข้อมูลผู้ใช้</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Layout Big Preview -->
   <div class="modal-backdrop" id="layoutPreviewModal">
-    <div class="modal-box" style="max-width:680px;">
-      <div class="modal-header"><h3 id="layoutPreviewTitle">ตัวอย่างผังห้อง</h3><button class="modal-close" onclick="closeModal('layoutPreviewModal')">&times;</button></div>
-      <div class="modal-body" style="text-align:center;">
-        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:14px;"><button type="button" class="btn btn-primary btn-sm" id="btnShowPhoto" onclick="switchPreviewMode('photo')">ภาพห้องจริง</button><button type="button" class="btn btn-outline btn-sm" id="btnShowDiagram" onclick="switchPreviewMode('diagram')">ภาพแผนผัง</button></div>
-        <img id="layoutBigImage" src="" style="width:100%; max-height:380px; object-fit:contain; border-radius:10px; background:#0f172a;">
-        <p id="layoutPreviewDesc" style="margin-top:12px; font-size:14px;"></p>
+    <div class="modal-box" style="max-width: 700px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 id="layoutPreviewTitle" style="font-size: 18px; color: var(--primary); font-weight: 700;"></h3>
+        <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('layoutPreviewModal')"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <p id="layoutPreviewDesc" style="font-size: 13.5px; color: var(--muted); margin-bottom: 15px;"></p>
+      
+      <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <button type="button" class="btn btn-primary btn-sm" id="btnShowPhoto" onclick="switchPreviewMode('photo')"><i class="bi bi-image"></i> ภาพบรรยากาศจริง</button>
+        <button type="button" class="btn btn-outline btn-sm" id="btnShowDiagram" onclick="switchPreviewMode('diagram')"><i class="bi bi-grid-3x3"></i> แผนผังการจัดโต๊ะ</button>
+      </div>
+
+      <div style="width: 100%; height: 380px; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+        <img id="layoutBigImage" src="" alt="Layout Preview" style="max-width: 100%; max-height: 100%; object-fit: contain;">
       </div>
     </div>
   </div>
 
-  <div class="modal-backdrop" id="roomModal">
-    <div class="modal-box" style="max-width:660px;">
-      <div class="modal-header"><h3 id="roomModalTitle">จัดการห้องประชุม</h3><button class="modal-close" onclick="closeModal('roomModal')">&times;</button></div>
-      <form id="roomForm" onsubmit="submitRoomForm(event)">
-        <div class="modal-body">
-          <input type="hidden" id="rmId">
-          <div class="form-grid">
-            <div class="form-group full"><label>ชื่อห้องประชุม <span class="req">*</span></label><input type="text" id="rmName" required></div>
-            <div class="form-group"><label>อาคาร</label><input type="text" id="rmBuilding"></div>
-            <div class="form-group"><label>ชั้น</label><input type="text" id="rmFloor"></div>
-            <div class="form-group"><label>ความจุ (คน) <span class="req">*</span></label><input type="number" id="rmCapacity" min="1" required></div>
-            <div class="form-group"><label>สถานะ</label><select id="rmStatus"><option value="พร้อมใช้งาน">พร้อมใช้งาน</option><option value="ปิดปรับปรุง">ปิดปรับปรุง</option></select></div>
-            <div class="form-group"><label>ผู้รับผิดชอบ</label><input type="text" id="rmResponsible"></div>
-            <div class="form-group"><label>สีประจำห้อง</label><input type="color" id="rmColor" value="#0284c7" style="height:42px; padding:4px;"></div>
-            <div class="form-group full"><label>อุปกรณ์</label><input type="text" id="rmEquipment"></div>
-            <div class="form-group full"><label>รายละเอียด</label><textarea id="rmDesc" rows="2"></textarea></div>
-            <div class="form-group full"><label>อัปโหลดรูปภาพขึ้น Google Drive</label><input type="file" id="rmImageFile" accept="image/*" onchange="handleRoomImageSelect(event)"></div>
-            <div class="form-group full"><label>หรือวางลิงก์รูปภาพ (URL)</label><input type="url" id="rmImageUrl" oninput="updateRoomImagePreview(this.value)"></div>
-            <div class="form-group full" id="rmPreviewWrap" style="display:none;"><img id="rmPreviewImg" src="" style="width:100%; max-height:160px; object-fit:cover; border-radius:10px;"></div>
-          </div>
-        </div>
-        <div class="modal-footer"><button type="button" class="btn btn-light" onclick="closeModal('roomModal')">ยกเลิก</button><button type="submit" class="btn btn-primary">บันทึกห้อง</button></div>
-      </form>
-    </div>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="loadingText" style="font-weight: 600; color: var(--primary);">กำลังประมวลผล...</div>
   </div>
 
-  <div class="modal-backdrop" id="userModal">
-    <div class="modal-box" style="max-width:460px;">
-      <div class="modal-header"><h3>จัดการผู้ใช้งาน</h3><button class="modal-close" onclick="closeModal('userModal')">&times;</button></div>
-      <form id="userForm" onsubmit="submitUserForm(event)">
-        <div class="modal-body">
-          <div class="form-group" style="margin-bottom:10px;"><label>อีเมล <span class="req">*</span></label><input type="email" id="usrEmail" required></div>
-          <div class="form-group" style="margin-bottom:10px;"><label>ชื่อ-นามสกุล <span class="req">*</span></label><input type="text" id="usrName" required></div>
-          <div class="form-group" style="margin-bottom:10px;"><label>หน่วยงาน</label><select id="usrDept"></select></div>
-          <div class="form-grid">
-            <div class="form-group"><label>สิทธิ์</label><select id="usrRole"><option value="User">User</option><option value="Approver">Approver</option><option value="Admin">Admin</option></select></div>
-            <div class="form-group"><label>สถานะ</label><select id="usrStatus">
-  <option value="Active">Active</option>
-  <option value="รออนุมัติ">รออนุมัติ</option>
-  <option value="ไม่อนุมัติ">ไม่อนุมัติ</option>
-  <option value="Inactive">Inactive</option>
-</select></div>
-          </div>
-          <div class="form-group" style="margin-top:10px;"><label>รหัสผ่าน / PIN ใหม่</label><input type="password" id="usrPasscode"></div>
-        </div>
-        <div class="modal-footer"><button type="button" class="btn btn-light" onclick="closeModal('userModal')">ยกเลิก</button><button type="submit" class="btn btn-primary">บันทึก</button></div>
-      </form>
-    </div>
-  </div>
+  <!-- Flatpickr JS & Locale Th -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
 
-  <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div><div id="loadingText" style="font-weight:600; color:var(--primary);">กำลังประมวลผล...</div></div>
-
+  <!-- App Frontend Logic -->
   <script src="js/app.js"></script>
 </body>
 </html>
