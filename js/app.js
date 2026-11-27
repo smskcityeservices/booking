@@ -7,7 +7,7 @@
  */
 
 // [สำคัญ] 1. นำ Web App URL (/exec) จาก Google Apps Script มาวางที่นี่
-var GAS_API_URL = "https://script.google.com/macros/s/AKfycbxzm4AoPFqWkj7zrVj81TT-_b1--eE1VtoSsZtwLBBvgI-3PWgJyZxU5Gx_0gmJJ_AhjQ/exec";
+var GAS_API_URL = "https://script.google.com/macros/s/AKfycbwqiWZF_yBsUa18YW4pVvFslXh1lq6A3n9S8wOJptwSQPKx_JH0eXS2tokk8XlmsdKMfw/exec";
 
 // [ทางเลือก] 2. ใส่ Google OAuth Client ID (จาก Google Cloud Console)
 var GOOGLE_CLIENT_ID = "146666427453-ml6lhhnemb9l3ok4urr5oia8lr883e7j.apps.googleusercontent.com";
