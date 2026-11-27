@@ -980,11 +980,12 @@ function fetchNotificationBadgesSilent(isInitial) {
   callGas('searchBookings', STATE.token, { myOnly: true, userEmail: STATE.user.email })
     .then(function(res) {
       var list = res.data || [];
-      var activeCount = list.filter(function(x) {
+      // 🟢 กรองนับเฉพาะสถานะ "รออนุมัติ" เท่านั้น
+      var pendingCount = list.filter(function(x) {
         var st = x.EffectiveStatus || x.Status;
-        return st === 'รออนุมัติ' || st === 'อนุมัติ';
+        return st === 'รออนุมัติ';
       }).length;
-      updateMyBookingsBadge(activeCount);
+      updateMyBookingsBadge(pendingCount);
       checkBookerStatusUpdates(list);
     })
     .catch(function() {});
@@ -1735,17 +1736,27 @@ function loadMyBookings() {
     return;
   }
 
+  function loadMyBookings() {
+  var emailInput = document.getElementById('myBookingEmailInput').value.trim();
+  var tbody = document.getElementById('myBookingsBody');
+  if (!tbody) return;
+
+  if (!STATE.user.authenticated && !emailInput) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:16px;">กรุณาเข้าสู่ระบบ หรือกรอกอีเมลเพื่อค้นหารายการจองของคุณ</td></tr>';
+    return;
+  }
+
   setLoading(true, 'กำลังโหลดรายการจอง...');
   callGas('searchBookings', STATE.token, { myOnly: true, userEmail: emailInput })
     .then(function(res) {
       var list = res.data || [];
       
-      // คำนวณจำนวนรายการจองที่ยัง Active อยู่ (รออนุมัติ หรือ อนุมัติแล้ว) เพื่อนําไปแสดง Badge สีแดง
-      var activeCount = list.filter(function(x) {
+      // 🟢 ปรับปรุง: นับเฉพาะรายการจองที่อยู่ในสถานะ "รออนุมัติ" เท่านั้น เพื่อนําไปแสดง Badge สีแดง
+      var pendingCount = list.filter(function(x) {
         var st = x.EffectiveStatus || x.Status;
-        return st === 'รออนุมัติ' || st === 'อนุมัติ';
+        return st === 'รออนุมัติ';
       }).length;
-      updateMyBookingsBadge(activeCount);
+      updateMyBookingsBadge(pendingCount);
       
       // ตรวจสอบและเด้ง Popup แจ้งผลการอนุมัติ/ไม่อนุมัติอัตโนมัติ
       checkBookerStatusUpdates(list);
