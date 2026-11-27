@@ -580,8 +580,6 @@ function populateDropdowns() {
     if (el) el.innerHTML = filterOpts;
   });
 }
-var kioskTimer = null;
-var kioskClockTimer = null;
 /* ==========================================================================
  * Navigation (ปรับปรุงล่าสุด รองรับ Kiosk Mode)
  * ======================================================================== */
@@ -684,25 +682,32 @@ function navigateTo(view) {
   else if (view === 'admin') loadAdminView();
   else if (view === 'kiosk') loadKioskData();
 }
+/* ==========================================================================
+ * Kiosk Mode Management (Full Screen & Auto Refresh)
+ * ======================================================================== */
+var kioskTimer = null;
+var kioskClockTimer = null;
+
 function startKioskMode() {
-  // ซ่อนเมนูนำทางด้านข้างหากต้องการให้เต็มจอ
-  var sidebar = document.getElementById('sidebar');
-  if (sidebar) sidebar.style.display = 'none';
-  
+  // 1. สั่งเปิดใช้งานโหมด Full Screen ของเบราว์เซอร์อัตโนมัติ
+  enterFullscreen();
+
+  // 2. โหลดข้อมูลรอบแรก
   loadKioskData();
   
-  // อัปเดตข้อมูลทุก 30 วินาที
+  // 3. ตั้งเวลาอัปเดตข้อมูลห้องประชุมทุกๆ 30 วินาที
   if (!kioskTimer) {
     kioskTimer = setInterval(loadKioskData, 30000);
   }
   
-  // อัปเดตนาฬิกาทุก 1 วินาที
+  // 4. ตั้งเวลานาฬิกาดิจิทัลทุกๆ 1 วินาที
   if (!kioskClockTimer) {
     kioskClockTimer = setInterval(updateKioskClock, 1000);
   }
 }
 
 function stopKioskMode() {
+  // เคลียร์ Timer ต่างๆ
   if (kioskTimer) {
     clearInterval(kioskTimer);
     kioskTimer = null;
@@ -711,8 +716,42 @@ function stopKioskMode() {
     clearInterval(kioskClockTimer);
     kioskClockTimer = null;
   }
-  var sidebar = document.getElementById('sidebar');
-  if (sidebar) sidebar.style.display = '';
+
+  // ออกจากโหมด Full Screen ของเบราว์เซอร์
+  exitFullscreen();
+}
+
+/**
+ * ฟังก์ชันสั่งให้หน้าจอเบราว์เซอร์ขยายเป็นแบบ Fullscreen แท้
+ */
+function enterFullscreen() {
+  var elem = document.documentElement;
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen().catch(function(err) {
+      console.log("Browser prevented automatic fullscreen:", err);
+    });
+  } else if (elem.webkitRequestFullscreen) { /* Safari */
+    elem.webkitRequestFullscreen();
+  } else if (elem.msRequestFullscreen) { /* IE11 */
+    elem.msRequestFullscreen();
+  }
+}
+
+/**
+ * ฟังก์ชันสั่งออกจาก Fullscreen
+ */
+function exitFullscreen() {
+  if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(function(err) {
+        console.log("Exit fullscreen error:", err);
+      });
+    } else if (document.webkitExitFullscreen) { /* Safari */
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) { /* IE11 */
+      document.msExitFullscreen();
+    }
+  }
 }
 
 function updateKioskClock() {
