@@ -948,34 +948,6 @@ function updateDurationBadge() {
   badge.style.borderColor = '#bbf7d0';
 }
 
-function applyTimePreset(startTime, endTime, btn) {
-  var startSelect = document.getElementById('bkStart');
-  var endSelect = document.getElementById('bkEnd');
-  var dateInput = document.getElementById('bkDate');
-  var isToday = (dateInput && dateInput.value === todayIso());
-
-  if (isToday) {
-    var now = new Date();
-    var nowMinutes = now.getHours() * 60 + now.getMinutes();
-    if (timeToMinutes(startTime) <= nowMinutes) {
-      showToast('เวลา ' + startTime + ' น. ได้ผ่านไปแล้วสำหรับวันนี้', 'warning');
-      return;
-    }
-  }
-
-  ensureTimeOptionExists(startSelect, startTime);
-  startSelect.value = startTime;
-  rebuildEndTimeOptions();
-  ensureTimeOptionExists(endSelect, endTime);
-  endSelect.value = endTime;
-
-  document.querySelectorAll('.time-preset-btn').forEach(function(b) { b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-
-  updateDurationBadge();
-  triggerAutoCheckAvailability();
-}
-
 function applyTimeDuration(mins, btn) {
   var start = document.getElementById('bkStart').value;
   if (!start) return;
@@ -995,13 +967,13 @@ function applyTimeDuration(mins, btn) {
   triggerAutoCheckAvailability();
 }
 
-  function applyTimePreset(startTime, endTime, btn) {
+ function applyTimePreset(startTime, endTime, btn) {
     var startSelect = document.getElementById('bkStart');
     var endSelect = document.getElementById('bkEnd');
     var dateInput = document.getElementById('bkDate');
     var isToday = (dateInput && dateInput.value === todayIso());
 
-    // ตรวจสอบเฉพาะเมื่อจองสำหรับ "วันนี้" และเวลาเริ่มผ่านไปแล้ว
+    // ตรวจสอบเฉพาะเมื่อจองสำหรับ "วันนี้" และเวลาเริ่มต้นผ่านไปแล้ว
     if (isToday) {
       var now = new Date();
       var nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -1018,8 +990,21 @@ function applyTimeDuration(mins, btn) {
     ensureTimeOptionExists(endSelect, endTime);
     endSelect.value = endTime;
 
-    document.querySelectorAll('.time-preset-btn').forEach(function(b) { b.classList.remove('active'); });
-    if (btn) btn.classList.add('active');
+    // เคลียร์และเซ็ต Active ให้ปุ่มที่ถูกกด
+    document.querySelectorAll('.time-preset-btn').forEach(function(b) { 
+      b.classList.remove('active'); 
+    });
+    
+    if (btn) {
+      btn.classList.add('active');
+    } else {
+      // ค้นหาปุ่มที่ตรงกับช่วงเวลาแล้วใส่ class active ให้
+      document.querySelectorAll('.time-preset-btn').forEach(function(b) {
+        if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf(startTime) !== -1) {
+          b.classList.add('active');
+        }
+      });
+    }
 
     updateDurationBadge();
     triggerAutoCheckAvailability();
