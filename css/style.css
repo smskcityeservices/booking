@@ -378,3 +378,33 @@
   .nav-item-cta.active i {
     color: #0d9488 !important;
   }
+/* ปรับแต่ง jQuery UI Datepicker ให้สวยงามทันสมัย */
+  .ui-datepicker {
+    font-family: 'Sarabun', sans-serif !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+    border: 1px solid var(--border) !important;
+    padding: 10px !important;
+    background: #fff !important;
+    z-index: 1070 !important;
+  }
+  .ui-datepicker-header {
+    background: var(--gradient) !important;
+    color: #fff !important;
+    border-radius: 8px !important;
+    border: none !important;
+    font-weight: 700;
+  }
+  .ui-datepicker-title { color: #fff !important; }
+  .ui-state-default, .ui-state-default:hover {
+    border-radius: 8px !important;
+    text-align: center;
+  }
+  .ui-state-highlight {
+    background: var(--primary-light) !important;
+    color: #fff !important;
+  }
+  .ui-state-active {
+    background: var(--primary) !important;
+    color: #fff !important;
+  }
