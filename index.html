@@ -488,6 +488,36 @@
                 <div class="form-group"><label>Email เตือนก่อน 1 วัน</label><select id="setRemind1D"><option value="TRUE">เปิดใช้งาน</option><option value="FALSE">ปิดใช้งาน</option></select></div>
                 <div class="form-group"><label>Email เตือนก่อน 2 ชม.</label><select id="setRemind2H"><option value="TRUE">เปิดใช้งาน</option><option value="FALSE">ปิดใช้งาน</option></select></div>
                 <div class="form-group"><label>Email เตือนก่อน 30 นาที</label><select id="setRemind30M"><option value="TRUE">เปิดใช้งาน</option><option value="FALSE">ปิดใช้งาน</option></select></div>
+                <!-- แทรกเพิ่มเข้าไปในฟอร์มตั้งค่าระบบ (Admin Settings Form) -->
+<div style="margin-top: 25px; border-top: 2px dashed #e2e8f0; padding-top: 20px;">
+  <h3 style="font-size: 16px; color: var(--primary); margin-bottom: 15px;"><i class="bi bi-shield-lock"></i> ตั้งค่าระบบขั้นสูง & การเชื่อมต่อภายนอก</h3>
+  
+  <div class="form-group mb-3">
+    <label class="form-label">Google Spreadsheet ID (ฐานข้อมูลหลัก)</label>
+    <input type="text" id="setSpreadsheetId" class="form-control" placeholder="เช่น 1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms">
+    <small class="text-muted">รหัส ID จากลิงก์ Google Sheets ของระบบ</small>
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Google Calendar ID (สำหรับซิงค์ปฏิทิน)</label>
+    <input type="text" id="setCalendarId" class="form-control" placeholder="เช่น primary หรืออีเมลปฏิทิน">
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Google Drive Folder ID (สำหรับเก็บรูปภาพห้องประชุม)</label>
+    <input type="text" id="setDriveFolderId" class="form-control" placeholder="รหัสโฟลเดอร์ใน Google Drive">
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Google Chat Webhook URL (สำหรับการแจ้งเตือนผ่าน Chat)</label>
+    <input type="text" id="setChatWebhookUrl" class="form-control" placeholder="https://chat.googleapis.com/v1/spaces/...">
+  </div>
+
+  <div class="form-group mb-3">
+    <label class="form-label">Admin Notify Email (อีเมลผู้ดูแลรับแจ้งเตือนสำรอง)</label>
+    <input type="email" id="setAdminNotifyEmail" class="form-control" placeholder="admin@example.com">
+  </div>
+</div>
                 <div class="form-group full"><button type="submit" class="btn btn-primary" style="width:fit-content;"><i class="bi bi-save"></i> บันทึกการตั้งค่า</button></div>
               </form>
             </div>
