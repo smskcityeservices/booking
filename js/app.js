@@ -1721,71 +1721,8 @@ function quickBookRoom(roomId) {
 
   navigateTo('booking');
   setTimeout(function() { selectRoomFromAvail(roomId); }, 150);
-}
 
-function loadMyBookings() {
-  var emailInput = document.getElementById('myBookingEmailInput').value.trim();
-  var tbody = document.getElementById('myBookingsBody');
-  if (!tbody) return;
 
-  if (!STATE.user.authenticated && !emailInput) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:16px;">กรุณาเข้าสู่ระบบ หรือกรอกอีเมลเพื่อค้นหารายการจองของคุณ</td></tr>';
-    return;
-  }
-
-  setLoading(true, 'กำลังโหลดรายการจอง...');
-  callGas('searchBookings', STATE.token, { myOnly: true, userEmail: emailInput })
-    .then(function(res) {
-      var list = res.data || [];
-      
-      // 🟢 ปรับปรุง: นับเฉพาะรายการจองที่อยู่ในสถานะ "รออนุมัติ" เท่านั้น เพื่อนําไปแสดง Badge สีแดง
-      var pendingCount = list.filter(function(x) {
-        var st = x.EffectiveStatus || x.Status;
-        return st === 'รออนุมัติ';
-      }).length;
-      updateMyBookingsBadge(pendingCount);
-      
-      // ตรวจสอบและเด้ง Popup แจ้งผลการอนุมัติ/ไม่อนุมัติอัตโนมัติ
-      checkBookerStatusUpdates(list);
-
-      if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:16px;">ไม่พบรายการจอง</td></tr>';
-        return;
-      }
-
-      var html = '';
-      list.forEach(function(b) {
-        var st = b.EffectiveStatus || b.Status;
-        var canCancel = (STATE.user.authenticated && (st === 'รออนุมัติ' || st === 'อนุมัติ'));
-        var cancelBtn = canCancel ? ('<button class="btn btn-danger btn-sm" onclick="cancelMyBooking(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-x-circle"></i> ยกเลิก</button>') : '';
-
-        var thaiDate = formatDisplayDateThai(b.Date);
-        var statusHint = '';
-        if (st === 'รออนุมัติ') statusHint = '<br><small style="color:#d97706;"><i class="bi bi-hourglass-split"></i> กำลังรอผู้ดูแลตรวจสอบ</small>';
-        else if (st === 'อนุมัติ') statusHint = '<br><small style="color:#16a34a;"><i class="bi bi-check-circle"></i> พร้อมใช้งานตามกำหนด</small>';
-        else if (st === 'ไม่อนุมัติ') statusHint = '<br><small style="color:#dc2626;"><i class="bi bi-x-circle"></i> ไม่ได้รับการอนุมัติ</small>';
-
-        html += '<tr>' +
-          '<td><strong>' + escapeHtml(b.BookingID) + '</strong></td>' +
-          '<td>' + escapeHtml(thaiDate) + '<br><small>' + escapeHtml(b.StartTime) + '–' + escapeHtml(b.EndTime) + ' น.</small></td>' +
-          '<td>' + escapeHtml(b.RoomName) + '</td>' +
-          '<td>' + escapeHtml(b.Topic) + '</td>' +
-          '<td>' + statusBadge(st) + statusHint + '</td>' +
-          '<td style="white-space:nowrap;">' +
-          '<button class="btn btn-outline btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')" title="ดูรายละเอียด & QR Code"><i class="bi bi-qr-code"></i></button> ' +
-          cancelBtn +
-          '</td>' +
-          '</tr>';
-      });
-      tbody.innerHTML = html;
-    })
-    .catch(function(err) {
-      showToast(err.message, 'error');
-    })
-    .finally(function() {
-      setLoading(false);
-    });
-}
 
 function cancelMyBooking(bookingId) {
   Swal.fire({
