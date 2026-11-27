@@ -953,24 +953,73 @@ function applyTimeDuration(mins, btn) {
 }
 
 function disablePastPresetButtons(isToday, nowMinutes) {
-  var presets = document.querySelectorAll('.time-preset-btn');
-  if (!isToday) {
-    presets.forEach(function(btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; });
-    return;
+    var presets = document.querySelectorAll('.time-preset-btn');
+    
+    // 🟢 ถ้าไม่ใช่ "วันนี้" (เป็นวันอื่นในอนาคต) ให้เปิดใช้งานทุกปุ่มปกติทันที
+    if (!isToday) {
+      presets.forEach(function(btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+      });
+      return;
+    }
+
+    // 🟡 ถ้าเป็น "วันนี้" จึงค่อยตรวจสอบเวลาที่ผ่านไปแล้ว
+    // 1. ปุ่มเช้า (08:30 - 12:00) - ล็อกเฉพาะเมื่อเลยเวลา 12:00 ไปแล้ว (ให้จองช่วงบ่ายได้) หรือเลย 08:30
+    if (presets[0]) {
+      var pastMorning = (nowMinutes >= timeToMinutes('12:00'));
+      presets[0].disabled = pastMorning;
+      presets[0].style.opacity = pastMorning ? '0.35' : '1';
+      presets[0].style.cursor = pastMorning ? 'not-allowed' : 'pointer';
+    }
+    
+    // 2. ปุ่มบ่าย (13:00 - 16:30) - ล็อกเฉพาะเมื่อเลยเวลา 16:30 ไปแล้ว
+    if (presets[1]) {
+      var pastAfternoon = (nowMinutes >= timeToMinutes('16:30'));
+      presets[1].disabled = pastAfternoon;
+      presets[1].style.opacity = pastAfternoon ? '0.35' : '1';
+      presets[1].style.cursor = pastAfternoon ? 'not-allowed' : 'pointer';
+    }
+    
+    // 3. ปุ่มเต็มวัน (08:30 - 16:30) - ล็อกเมื่อเลย 08:30 ไปแล้ว
+    if (presets[2]) {
+      var pastAllDay = (nowMinutes >= timeToMinutes('08:30'));
+      presets[2].disabled = pastAllDay;
+      presets[2].style.opacity = pastAllDay ? '0.35' : '1';
+      presets[2].style.cursor = pastAllDay ? 'not-allowed' : 'pointer';
+    }
   }
-  if (presets[0]) {
-    var pastMorning = (nowMinutes >= timeToMinutes('08:30'));
-    presets[0].disabled = pastMorning; presets[0].style.opacity = pastMorning ? '0.35' : '1'; presets[0].style.cursor = pastMorning ? 'not-allowed' : 'pointer';
+
+  function applyTimePreset(startTime, endTime, btn) {
+    var startSelect = document.getElementById('bkStart');
+    var endSelect = document.getElementById('bkEnd');
+    var dateInput = document.getElementById('bkDate');
+    var isToday = (dateInput && dateInput.value === todayIso());
+
+    // ตรวจสอบเฉพาะเมื่อจองสำหรับ "วันนี้" และเวลาเริ่มผ่านไปแล้ว
+    if (isToday) {
+      var now = new Date();
+      var nowMinutes = now.getHours() * 60 + now.getMinutes();
+      if (timeToMinutes(startTime) <= nowMinutes) {
+        showToast('เวลาเริ่มต้น ' + startTime + ' น. ได้ผ่านไปแล้วสำหรับวันนี้', 'warning');
+        return;
+      }
+    }
+
+    ensureTimeOptionExists(startSelect, startTime);
+    startSelect.value = startTime;
+
+    rebuildEndTimeOptions();
+    ensureTimeOptionExists(endSelect, endTime);
+    endSelect.value = endTime;
+
+    document.querySelectorAll('.time-preset-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+
+    updateDurationBadge();
+    triggerAutoCheckAvailability();
   }
-  if (presets[1]) {
-    var pastAfternoon = (nowMinutes >= timeToMinutes('13:00'));
-    presets[1].disabled = pastAfternoon; presets[1].style.opacity = pastAfternoon ? '0.35' : '1'; presets[1].style.cursor = pastAfternoon ? 'not-allowed' : 'pointer';
-  }
-  if (presets[2]) {
-    var pastAllDay = (nowMinutes >= timeToMinutes('08:30'));
-    presets[2].disabled = pastAllDay; presets[2].style.opacity = pastAllDay ? '0.35' : '1'; presets[2].style.cursor = pastAllDay ? 'not-allowed' : 'pointer';
-  }
-}
 
 function disableTimePresets(disabled) {
   document.querySelectorAll('.time-preset-btn').forEach(function(b) { b.disabled = disabled; b.style.opacity = disabled ? '0.35' : '1'; });
