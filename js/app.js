@@ -2,7 +2,6 @@
  * ============================================================================
  * js/app.js - Frontend Logic (GitHub Pages / Headless GAS Edition)
  * ระบบจองห้องประชุมออนไลน์ เทศบาลเมืองสมุทรสงคราม
- * [ช่วงที่ 1 / 2]
  * ============================================================================
  */
 
@@ -482,6 +481,7 @@ function checkBookerStatusUpdates(bookingsList) {
     }).then(function() { if (typeof loadMyBookings === 'function') loadMyBookings(); });
   }
 }
+
 /* ==========================================================================
  * Dashboard, Charts & Kiosk Mode
  * ======================================================================== */
@@ -540,9 +540,6 @@ function rejectFromDashboard(id) {
   });
 }
 
-/* ==========================================================================
- * Kiosk Mode Management
- * ======================================================================== */
 var kioskTimer = null; var kioskClockTimer = null;
 function startKioskMode() { enterFullscreen(); loadKioskData(); if (!kioskTimer) kioskTimer = setInterval(loadKioskData, 30000); if (!kioskClockTimer) kioskClockTimer = setInterval(updateKioskClock, 1000); }
 function stopKioskMode() { if (kioskTimer) { clearInterval(kioskTimer); kioskTimer = null; } if (kioskClockTimer) { clearInterval(kioskClockTimer); kioskClockTimer = null; } exitFullscreen(); }
@@ -677,26 +674,16 @@ function onStartTimeChanged() { rebuildEndTimeOptions(); updateDurationBadge(); 
 function onEndTimeChanged() { updateDurationBadge(); }
 
 function updateDurationBadge() {
-  var startEl = document.getElementById('bkStart');
-  var endEl = document.getElementById('bkEnd');
-  var badge = document.getElementById('bookingDurationText');
+  var startEl = document.getElementById('bkStart'); var endEl = document.getElementById('bkEnd'); var badge = document.getElementById('bookingDurationText');
   if (!badge || !startEl || !endEl || !startEl.value || !endEl.value) return;
-
   var diff = timeToMinutes(endEl.value) - timeToMinutes(startEl.value);
   if (diff <= 0) {
     badge.innerHTML = '<i class="bi bi-exclamation-triangle"></i> เวลาไม่ถูกต้อง';
-    badge.style.background = '#fee2e2';
-    badge.style.color = '#991b1b';
-    return;
+    badge.style.background = '#fee2e2'; badge.style.color = '#991b1b'; return;
   }
-  
-  var h = Math.floor(diff / 60);
-  var m = diff % 60;
-  var str = (h > 0 ? h + ' ชม. ' : '') + (m > 0 ? m + ' นาที' : '');
-  
-  badge.innerHTML = '<i class="bi bi-hourglass-split"></i> รวม ' + str;
-  badge.style.background = '#f0fdf4';
-  badge.style.color = '#166534';
+  var h = Math.floor(diff / 60), m = diff % 60;
+  badge.innerHTML = '<i class="bi bi-hourglass-split"></i> รวม ' + (h > 0 ? h + ' ชม. ' : '') + (m > 0 ? m + ' นาที' : '');
+  badge.style.background = '#f0fdf4'; badge.style.color = '#166534';
 }
 
 function applyTimePreset(startTime, endTime, btn) {
@@ -984,7 +971,7 @@ function downloadBookingPdf(bookingId) {
 }
 
 function loadCalendarEvents() {
-  var roomId = document.getElementById('calendarRoomFilter') ? document.getElementById('calendarRoomFilter').value : '';
+  var roomId = document.getElementById('calendarRoomFilter') ? document.getElementById('calendarRoomFilter'].value : '';
   setLoading(true, 'กำลังโหลดปฏิทิน...');
   callGas('getCalendarBookings', roomId)
     .then(function(res) {
