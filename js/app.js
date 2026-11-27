@@ -817,7 +817,7 @@ function loadKioskData() {
 
         // แสดงรายการจองถัดไป (สูงสุด 5 รายการ)
         html += '<div style="font-size: 12.5px; color: #94a3b8; border-top: 1px dashed #334155; padding-top: 10px; margin-top: auto;">' +
-          '<div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;"><i class="bi bi-calendar-event"></i> รายการจองถัดไปวันนี้ (สูงสุด 5 รายการ):</div>';
+          '<div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;"><i class="bi bi-calendar-event"></i> รายการจองถัดไป:</div>';
 
         if (r.nextMeetings && r.nextMeetings.length > 0) {
           html += '<div style="display: flex; flex-direction: column; gap: 6px;">';
