@@ -980,6 +980,23 @@ function fetchNotificationBadgesSilent(isInitial) {
   callGas('searchBookings', STATE.token, { myOnly: true, userEmail: STATE.user.email })
     .then(function(res) {
       var list = res.data || [];
+      
+      // 🟢 ปรับปรุง: นับเฉพาะรายการจองที่อยู่ในสถานะ "รออนุมัติ" เท่านั้นสำหรับ Badge ของผู้ใช้ทั่วไป
+      var pendingCount = list.filter(function(x) {
+        var st = x.EffectiveStatus || x.Status;
+        return st === 'รออนุมัติ';
+      }).length;
+      
+      updateMyBookingsBadge(pendingCount);
+      checkBookerStatusUpdates(list);
+    })
+    .catch(function() {});
+}
+
+  // 2. สำหรับบุคลากรทุกคน: อัปเดต Badge รายการจองของฉัน และตรวจจับผลอนุมัติ
+  callGas('searchBookings', STATE.token, { myOnly: true, userEmail: STATE.user.email })
+    .then(function(res) {
+      var list = res.data || [];
       // 🟢 กรองนับเฉพาะสถานะ "รออนุมัติ" เท่านั้น
       var pendingCount = list.filter(function(x) {
         var st = x.EffectiveStatus || x.Status;
