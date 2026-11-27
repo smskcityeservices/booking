@@ -296,17 +296,25 @@
 
         <!-- View: Booking -->
         <section class="app-view" id="view-booking">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title"><i class="bi bi-calendar2-check"></i> 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน</div>
-              <div style="display:flex; align-items:center; gap:8px;">
+  <!-- ขั้นตอนที่ 1: ตรวจสอบสถานะห้องว่างอัตโนมัติรายวัน -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="bi bi-calendar2-check"></i> 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน</div>
+      <div style="display:flex; align-items:center; gap:8px;">
         <label for="availCheckDate" style="margin:0; font-size:14px; font-weight:600;">วันที่ใช้งาน:</label>
-        <!-- ช่อง input วันที่ใช้งานแบบแปลงเป็น พ.ศ. อัตโนมัติ -->
-        <input type="date" id="availCheckDate" style="width:auto; font-weight:600;" onchange="onBookingDateChanged()">
+        
+        <!-- ========================================== -->
+        <!-- 📌 นำโค้ดนี้มาวางแทนที่ช่อง input วันที่เดิมตรงนี้ -->
+        <!-- ========================================== -->
+        <input type="text" id="availCheckDate" placeholder="วว/ดด/ปปปป" style="font-weight:600; background:#fff; cursor:pointer;" readonly>
+
       </div>
-            </div>
-            <div class="avail-list" id="roomAvailCards"></div>
-          </div>
+    </div>
+    <div class="avail-list" id="roomAvailCards">
+      <div style="color:var(--muted); padding:10px 0;">กำลังโหลดสถานะห้องประชุม...</div>
+    </div>
+  </div>
+          
           <div class="card">
             <div class="card-header"><div class="card-title"><i class="bi bi-pencil-square"></i> 2. กรอกข้อมูลการจองและกำหนดรูปแบบห้องประชุม</div></div>
             <form id="bookingForm" onsubmit="submitBookingForm(event)">
