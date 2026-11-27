@@ -1172,6 +1172,15 @@ function onBookingDateChanged() {
     var chkBox = document.getElementById('availabilityCheckBox');
     if (chkBox) chkBox.innerHTML = '';
 
+    // 🟢 เพิ่มโค้ดตรงนี้: บังคับปลดล็อกปุ่ม Preset ทั้งหมดทันทีเมื่อเปลี่ยนวันที่ (ป้องกันปุ่มเต็มวันเทา)
+    var presets = document.querySelectorAll('.time-preset-btn');
+    presets.forEach(function(btn) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+      btn.style.pointerEvents = 'auto';
+    });
+
     var container = document.getElementById('roomAvailCards');
     if (!container) return;
     container.innerHTML = '<div style="color:var(--muted); padding:10px 0;">กำลังตรวจสอบสถานะห้องประชุม...</div>';
@@ -1225,10 +1234,10 @@ function onBookingDateChanged() {
         });
         container.innerHTML = html;
       })
-      .catch(function(err) {
+       .catch(function(err) {
         container.innerHTML = '<div class="alert alert-danger">' + escapeHtml(err.message) + '</div>';
       });
-  }
+}
 
 function syncDateFromForm() {
   var d = document.getElementById('bkDate').value;
