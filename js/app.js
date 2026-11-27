@@ -404,11 +404,11 @@ function bootstrapApp() {
       // 5. เปิดใช้งานปฏิทิน Flatpickr สไตล์ Modern (ภาษาไทยและปี พ.ศ.)
       if (typeof initModernThaiCalendar === 'function') {
         initModernThaiCalendar('availCheckDate', function(selectedDate) {
-          onBookingDateChanged();
+          handleDateSelectionChange(selectedDate, 'availCheckDate');
         });
 
         initModernThaiCalendar('bkDate', function(selectedDate) {
-          syncDateFromForm();
+          handleDateSelectionChange(selectedDate, 'bkDate');
         });
       }
 
@@ -441,7 +441,118 @@ function bootstrapApp() {
       setLoading(false);
     });
 }
+/**
+ * ฟังก์ชันกลางสำหรับจัดการเมื่อมีการเปลี่ยนวันที่จากช่องใดช่องหนึ่ง
+ */
+function handleDateSelectionChange(selectedDate, sourceId) {
+  if (!selectedDate) return;
 
+  // 1. ซิงค์ค่าวันที่ระหว่างช่องด้านบน (availCheckDate) และด้านล่าง (bkDate) ให้ตรงกันเสมอ
+  var availInput = document.getElementById('availCheckDate');
+  var bkInput = document.getElementById('bkDate');
+
+  if (availInput && availInput.value !== selectedDate) {
+    availInput.value = selectedDate;
+    if (availInput._flatpickr) availInput._flatpickr.setDate(selectedDate, false);
+  }
+  if (bkInput && bkInput.value !== selectedDate) {
+    bkInput.value = selectedDate;
+    if (bkInput._flatpickr) bkInput._flatpickr.setDate(selectedDate, false);
+  }
+
+  // 2. ล้างกล่องแจ้งเตือนสถานะการจองเดิมทิ้ง
+  var chkBox = document.getElementById('availabilityCheckBox');
+  if (chkBox) chkBox.innerHTML = '';
+
+  // 3. บังคับปลดล็อกปุ่ม Preset ทั้งหมดทันที (เปิดปุ่มเต็มวัน/เช้า/บ่ายให้กดได้)
+  var presets = document.querySelectorAll('.time-preset-btn');
+  presets.forEach(function(btn) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.style.pointerEvents = 'auto';
+  });
+
+  // 4. อัปเดตตัวเลือกสล็อตเวลา (Time Slots)
+  updateTimeSlotOptions();
+
+  // 5. [หัวใจสำคัญ] สั่งดึงสถานะห้องว่างรายวันใหม่จากฐานข้อมูลเพื่ออัปเดตการ์ดด้านบนและสถานะห้อง
+  fetchAndRenderRoomAvailability(selectedDate);
+}
+
+// ฟังก์ชันเดิมรองรับการเรียกใช้แบบเดิม
+function syncDateFromForm() {
+  var bkInput = document.getElementById('bkDate');
+  if (bkInput && bkInput.value) {
+    handleDateSelectionChange(bkInput.value, 'bkDate');
+  }
+}
+
+function onBookingDateChanged() {
+  var availInput = document.getElementById('availCheckDate');
+  if (availInput && availInput.value) {
+    handleDateSelectionChange(availInput.value, 'availCheckDate');
+  }
+}
+
+/**
+ * ฟังก์ชันดึงข้อมูลห้องว่างรายวันและเรนเดอร์การ์ดแสดงผลด้านบน
+ */
+function fetchAndRenderRoomAvailability(dateVal) {
+  var container = document.getElementById('roomAvailCards');
+  if (!container) return;
+  
+  container.innerHTML = '<div style="color:var(--muted); padding:10px 0;"><i class="bi bi-arrow-repeat spin"></i> กำลังตรวจสอบสถานะห้องประชุมประจำวัน...</div>';
+
+  callGas('getRoomAvailabilityForDate', dateVal)
+    .then(function(res) {
+      var rooms = res.data.rooms || [];
+      var currentSelected = document.getElementById('bkRoomId').value;
+
+      var html = '';
+      rooms.forEach(function(r) {
+        var isFree = (r.statusType === 'FREE');
+        var dot = isFree ? '🟢' : '🔴';
+        var statusCls = isFree ? 'avail-free' : 'avail-busy';
+        var selectedCls = (r.RoomID === currentSelected) ? 'selected' : '';
+
+        var statusHtml = '';
+        if (isFree) {
+          statusHtml = '— ว่างทั้งวัน';
+        } else if (r.statusType === 'FULL') {
+          statusHtml = '— <span style="color:#dc2626; font-weight:600;">ไม่ว่างทั้งวัน</span>';
+          if (r.bookedSlots && r.bookedSlots.length > 0) {
+            statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
+            r.bookedSlots.forEach(function(s) {
+              statusHtml += '<div>• ช่วงเวลา ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
+            });
+            statusHtml += '</div>';
+          }
+        } else {
+          statusHtml = '— <span style="color:#d97706; font-weight:600;">มีช่วงเวลาที่ไม่ว่าง:</span>';
+          if (r.bookedSlots && r.bookedSlots.length > 0) {
+            statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
+            r.bookedSlots.forEach(function(s) {
+              statusHtml += '<div>🔴 ถูกจอง ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
+            });
+            statusHtml += '</div>';
+          }
+        }
+
+        html += '<div class="avail-item ' + selectedCls + '" data-room-id="' + escapeHtml(r.RoomID) + '" onclick="selectRoomFromAvail(\'' + escapeHtml(r.RoomID) + '\')">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+          '<strong>' + escapeHtml(r.RoomName) + '</strong>' +
+          '<small style="color:var(--muted);">ความจุ ' + r.Capacity + ' คน</small>' +
+          '</div>' +
+          '<div class="avail-status ' + statusCls + '" style="margin-top:6px;">' + dot + ' ' + statusHtml + '</div>' +
+          '</div>';
+      });
+      container.innerHTML = html;
+    })
+    .catch(function(err) {
+      container.innerHTML = '<div class="alert alert-danger">ไม่สามารถโหลดสถานะห้องว่างได้: ' + escapeHtml(err.message) + '</div>';
+    });
+}
 function populateDropdowns() {
   var deptHtml = '<option value="">-- เลือกหน่วยงาน (กอง/สำนัก) --</option>';
   STATE.departments.forEach(function(d) {
@@ -1152,106 +1263,6 @@ function switchPreviewMode(mode) {
 /* ==========================================================================
  * Booking Flow, Summary Modal & Redirect to My Bookings
  * ======================================================================== */
-function onBookingDateChanged() {
-  var availD = document.getElementById('availCheckDate');
-  if (!availD || !availD.value) return;
-  var selectedDate = availD.value;
-
-  var bkD = document.getElementById('bkDate');
-  if (bkD && bkD.value !== selectedDate) {
-    bkD.value = selectedDate;
-    if (bkD._flatpickr) bkD._flatpickr.setDate(selectedDate, false);
-  }
-
-  var chkBox = document.getElementById('availabilityCheckBox');
-  if (chkBox) chkBox.innerHTML = '';
-
-  // อัปเดตสล็อตเวลาและโหลดสถานะห้องว่างใหม่ทันที
-  updateTimeSlotOptions();
-  fetchAndRenderRoomAvailability(selectedDate);
-}
-
-function syncDateFromForm() {
-  var bkD = document.getElementById('bkDate');
-  var availD = document.getElementById('availCheckDate');
-  if (!bkD) return;
-  
-  var selectedDate = bkD.value;
-  
-  // ซิงค์ค่าไปยังช่องตรวจสอบห้องว่างด้านบน
-  if (availD && availD.value !== selectedDate) {
-    availD.value = selectedDate;
-    if (availD._flatpickr) availD._flatpickr.setDate(selectedDate, false);
-  }
-
-  // อัปเดตสล็อตเวลาและโหลดสถานะห้องว่างใหม่ทันที
-  updateTimeSlotOptions();
-  fetchAndRenderRoomAvailability(selectedDate);
-}
-function fetchAndRenderRoomAvailability(dateVal) {
-  var container = document.getElementById('roomAvailCards');
-  if (!container) return;
-  
-  container.innerHTML = '<div style="color:var(--muted); padding:10px 0;"><i class="bi bi-arrow-repeat spin"></i> กำลังตรวจสอบสถานะห้องประชุมประจำวัน...</div>';
-
-  // 🟢 บังคับปลดล็อกปุ่ม Preset ทั้งหมดทันทีเมื่อเปลี่ยนวัน
-  var presets = document.querySelectorAll('.time-preset-btn');
-  presets.forEach(function(btn) {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    btn.style.cursor = 'pointer';
-    btn.style.pointerEvents = 'auto';
-  });
-
-  callGas('getRoomAvailabilityForDate', dateVal)
-    .then(function(res) {
-      var rooms = res.data.rooms || [];
-      var currentSelected = document.getElementById('bkRoomId').value;
-
-      var html = '';
-      rooms.forEach(function(r) {
-        var isFree = (r.statusType === 'FREE');
-        var dot = isFree ? '🟢' : '🔴';
-        var statusCls = isFree ? 'avail-free' : 'avail-busy';
-        var selectedCls = (r.RoomID === currentSelected) ? 'selected' : '';
-
-        var statusHtml = '';
-        if (isFree) {
-          statusHtml = '— ว่างทั้งวัน';
-        } else if (r.statusType === 'FULL') {
-          statusHtml = '— <span style="color:#dc2626; font-weight:600;">ไม่ว่างทั้งวัน</span>';
-          if (r.bookedSlots && r.bookedSlots.length > 0) {
-            statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
-            r.bookedSlots.forEach(function(s) {
-              statusHtml += '<div>• ช่วงเวลา ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
-            });
-            statusHtml += '</div>';
-          }
-        } else {
-          statusHtml = '— <span style="color:#d97706; font-weight:600;">มีช่วงเวลาที่ไม่ว่าง:</span>';
-          if (r.bookedSlots && r.bookedSlots.length > 0) {
-            statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
-            r.bookedSlots.forEach(function(s) {
-              statusHtml += '<div>🔴 ถูกจอง ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
-            });
-            statusHtml += '</div>';
-          }
-        }
-
-        html += '<div class="avail-item ' + selectedCls + '" data-room-id="' + escapeHtml(r.RoomID) + '" onclick="selectRoomFromAvail(\'' + escapeHtml(r.RoomID) + '\')">' +
-          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-          '<strong>' + escapeHtml(r.RoomName) + '</strong>' +
-          '<small style="color:var(--muted);">ความจุ ' + r.Capacity + ' คน</small>' +
-          '</div>' +
-          '<div class="avail-status ' + statusCls + '" style="margin-top:6px;">' + dot + ' ' + statusHtml + '</div>' +
-          '</div>';
-      });
-      container.innerHTML = html;
-    })
-    .catch(function(err) {
-      container.innerHTML = '<div class="alert alert-danger">ไม่สามารถโหลดสถานะห้องว่างได้: ' + escapeHtml(err.message) + '</div>';
-    });
-}
 function selectRoomFromAvail(roomId) {
   var select = document.getElementById('bkRoomId');
   if (select) select.value = roomId;
