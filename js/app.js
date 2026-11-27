@@ -790,56 +790,106 @@ function checkBookerStatusUpdates(bookingsList) {
  * Dynamic Time Slot Generation & Real-time Availability Checking
  * ======================================================================== */
 function updateTimeSlotOptions() {
-  var startSelect = document.getElementById('bkStart');
-  var endSelect = document.getElementById('bkEnd');
-  var dateInput = document.getElementById('bkDate');
-  if (!startSelect || !endSelect || !dateInput) return;
+    var startSelect = document.getElementById('bkStart');
+    var endSelect = document.getElementById('bkEnd');
+    var dateInput = document.getElementById('bkDate');
+    if (!startSelect || !endSelect || !dateInput) return;
 
-  var selectedDate = dateInput.value;
-  var today = todayIso();
-  var isToday = (selectedDate === today);
+    var selectedDate = dateInput.value;
+    var today = todayIso();
+    var isToday = (selectedDate === today);
 
-  var openTime = extractCleanTime(STATE.settings.OPEN_HOUR, '07:00');
-  var closeTime = extractCleanTime(STATE.settings.CLOSE_HOUR, '20:00');
-  var openMin = timeToMinutes(openTime);
-  var closeMin = timeToMinutes(closeTime);
+    var openTime = extractCleanTime(STATE.settings.OPEN_HOUR, '07:00');
+    var closeTime = extractCleanTime(STATE.settings.CLOSE_HOUR, '20:00');
+    var openMin = timeToMinutes(openTime);
+    var closeMin = timeToMinutes(closeTime);
 
-  var now = new Date();
-  var nowMinutes = now.getHours() * 60 + now.getMinutes();
+    var now = new Date();
+    var nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-  var startOptions = '';
-  var validStartCount = 0;
-  var firstValidStart = null;
-  var previousStartVal = startSelect.value;
+    var startOptions = '';
+    var validStartCount = 0;
+    var firstValidStart = null;
+    var previousStartVal = startSelect.value;
 
-  for (var m = openMin; m < closeMin; m += 30) {
-    if (isToday && m <= nowMinutes) continue;
-    var timeStr = minutesToTime(m);
-    if (!firstValidStart) firstValidStart = timeStr;
-    validStartCount++;
-    var sel = (timeStr === previousStartVal) ? 'selected' : '';
-    startOptions += '<option value="' + timeStr + '" ' + sel + '>' + timeStr + ' น.</option>';
+    for (var m = openMin; m < closeMin; m += 30) {
+      // กรองเวลาในอดีตออกเฉพาะเมื่อเป็น "วันนี้" เท่านั้น (ถ้าเป็นวันอื่น แสดงปกติทั้งหมด)
+      if (isToday && m <= nowMinutes) {
+        continue;
+      }
+
+      var timeStr = minutesToTime(m);
+      if (!firstValidStart) firstValidStart = timeStr;
+      validStartCount++;
+
+      var sel = (timeStr === previousStartVal) ? 'selected' : '';
+      startOptions += '<option value="' + timeStr + '" ' + sel + '>' + timeStr + ' น.</option>';
+    }
+
+    if (validStartCount === 0 && isToday) {
+      startSelect.innerHTML = '<option value="">-- หมดเวลาจองสำหรับวันนี้ --</option>';
+      endSelect.innerHTML = '<option value="">-- ไม่สามารถจองได้ --</option>';
+      disableTimePresets(true);
+      updateDurationBadge();
+      triggerAutoCheckAvailability();
+      return;
+    }
+
+    startSelect.innerHTML = startOptions;
+    
+    var hasPrev = false;
+    for (var i = 0; i < startSelect.options.length; i++) {
+      if (startSelect.options[i].value === previousStartVal) { hasPrev = true; break; }
+    }
+    startSelect.value = hasPrev ? previousStartVal : firstValidStart;
+
+    rebuildEndTimeOptions();
+    
+    // สั่งเปิด/ปิดปุ่ม Preset ตามเงื่อนไขวันที่
+    disablePastPresetButtons(isToday, nowMinutes);
   }
 
-  if (validStartCount === 0 && isToday) {
-    startSelect.innerHTML = '<option value="">-- หมดเวลาจองสำหรับวันนี้ --</option>';
-    endSelect.innerHTML = '<option value="">-- ไม่สามารถจองได้ --</option>';
-    disableTimePresets(true);
-    updateDurationBadge();
-    triggerAutoCheckAvailability();
-    return;
+  function disablePastPresetButtons(isToday, nowMinutes) {
+    var presets = document.querySelectorAll('.time-preset-btn');
+    
+    // 🟢 สำคัญมาก: ถ้าไม่ใช่ "วันนี้" (เช่น เป็นวันอื่นในอนาคต) บังคับเปิดใช้งานทุกปุ่ม 100% เสมอ
+    if (!isToday) {
+      presets.forEach(function(btn) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+      });
+      return;
+    }
+
+    // 🟡 ถ้าเป็น "วันนี้" จึงค่อยเช็กเวลาปัจจุบัน
+    if (presets[0]) {
+      var pastMorning = (nowMinutes >= timeToMinutes('12:00'));
+      presets[0].disabled = pastMorning;
+      presets[0].style.opacity = pastMorning ? '0.35' : '1';
+      presets[0].style.cursor = pastMorning ? 'not-allowed' : 'pointer';
+    }
+    if (presets[1]) {
+      var pastAfternoon = (nowMinutes >= timeToMinutes('16:30'));
+      presets[1].disabled = pastAfternoon;
+      presets[1].style.opacity = pastAfternoon ? '0.35' : '1';
+      presets[1].style.cursor = pastAfternoon ? 'not-allowed' : 'pointer';
+    }
+    if (presets[2]) {
+      var pastAllDay = (nowMinutes >= timeToMinutes('08:30'));
+      presets[2].disabled = pastAllDay;
+      presets[2].style.opacity = pastAllDay ? '0.35' : '1';
+      presets[2].style.cursor = pastAllDay ? 'not-allowed' : 'pointer';
+    }
   }
 
-  startSelect.innerHTML = startOptions;
-  var hasPrev = false;
-  for (var i = 0; i < startSelect.options.length; i++) {
-    if (startSelect.options[i].value === previousStartVal) { hasPrev = true; break; }
+  function disableTimePresets(disabled) {
+    document.querySelectorAll('.time-preset-btn').forEach(function(b) {
+      b.disabled = disabled;
+      b.style.opacity = disabled ? '0.35' : '1';
+      b.style.cursor = disabled ? 'not-allowed' : 'pointer';
+    });
   }
-  startSelect.value = hasPrev ? previousStartVal : firstValidStart;
-
-  rebuildEndTimeOptions();
-  disablePastPresetButtons(isToday, nowMinutes);
-}
 
 function rebuildEndTimeOptions() {
   var startSelect = document.getElementById('bkStart');
@@ -951,45 +1001,6 @@ function applyTimeDuration(mins, btn) {
   updateDurationBadge();
   triggerAutoCheckAvailability();
 }
-
-function disablePastPresetButtons(isToday, nowMinutes) {
-    var presets = document.querySelectorAll('.time-preset-btn');
-    
-    // 🟢 ถ้าไม่ใช่ "วันนี้" (เป็นวันอื่นในอนาคต) ให้เปิดใช้งานทุกปุ่มปกติทันที
-    if (!isToday) {
-      presets.forEach(function(btn) {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
-      });
-      return;
-    }
-
-    // 🟡 ถ้าเป็น "วันนี้" จึงค่อยตรวจสอบเวลาที่ผ่านไปแล้ว
-    // 1. ปุ่มเช้า (08:30 - 12:00) - ล็อกเฉพาะเมื่อเลยเวลา 12:00 ไปแล้ว (ให้จองช่วงบ่ายได้) หรือเลย 08:30
-    if (presets[0]) {
-      var pastMorning = (nowMinutes >= timeToMinutes('12:00'));
-      presets[0].disabled = pastMorning;
-      presets[0].style.opacity = pastMorning ? '0.35' : '1';
-      presets[0].style.cursor = pastMorning ? 'not-allowed' : 'pointer';
-    }
-    
-    // 2. ปุ่มบ่าย (13:00 - 16:30) - ล็อกเฉพาะเมื่อเลยเวลา 16:30 ไปแล้ว
-    if (presets[1]) {
-      var pastAfternoon = (nowMinutes >= timeToMinutes('16:30'));
-      presets[1].disabled = pastAfternoon;
-      presets[1].style.opacity = pastAfternoon ? '0.35' : '1';
-      presets[1].style.cursor = pastAfternoon ? 'not-allowed' : 'pointer';
-    }
-    
-    // 3. ปุ่มเต็มวัน (08:30 - 16:30) - ล็อกเมื่อเลย 08:30 ไปแล้ว
-    if (presets[2]) {
-      var pastAllDay = (nowMinutes >= timeToMinutes('08:30'));
-      presets[2].disabled = pastAllDay;
-      presets[2].style.opacity = pastAllDay ? '0.35' : '1';
-      presets[2].style.cursor = pastAllDay ? 'not-allowed' : 'pointer';
-    }
-  }
 
   function applyTimePreset(startTime, endTime, btn) {
     var startSelect = document.getElementById('bkStart');
