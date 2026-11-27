@@ -311,8 +311,12 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+/**
+ * เริ่มต้นระบบและโหลดข้อมูลตั้งต้นทั้งหมดเข้าสู่แอปพลิเคชัน
+ */
 function bootstrapApp() {
   setLoading(true, 'กำลังเชื่อมต่อข้อมูลระบบ...');
+
   return callGas('getInitialAppData', STATE.token)
     .then(function(res) {
       var data = res.data;
@@ -323,13 +327,22 @@ function bootstrapApp() {
       STATE.layouts = (data.layouts && data.layouts.length > 0) ? data.layouts : DEFAULT_LAYOUTS;
       STATE.webAppUrl = data.webAppUrl || '';
 
+      // อัปเดตชื่อหน่วยงานบนหัวแถบเมนู
       var orgLabel = document.getElementById('orgNameLabel');
-      if (orgLabel) orgLabel.textContent = STATE.settings.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม';
+      if (orgLabel) {
+        orgLabel.textContent = STATE.settings.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม';
+      }
 
+      // 1. เติมตัวเลือกใน Dropdowns ทั้งหมด
       populateDropdowns();
+
+      // 2. เรนเดอร์การ์ดรูปแบบการจัดโต๊ะเก้าอี้ห้องประชุม
       renderBookingLayoutCards();
+
+      // 3. อัปเดตสถานะผู้ใช้งาน (แสดง/ซ่อน เมนูตามสิทธิ์)
       updateAuthUI();
 
+      // 4. ตั้งค่าวันที่เริ่มต้นสำหรับช่องเลือกวัน (วันนี้เป็นต้นไป)
       var today = todayIso();
       ['availCheckDate', 'bkDate'].forEach(function(id) {
         var input = document.getElementById(id);
@@ -339,19 +352,44 @@ function bootstrapApp() {
         }
       });
 
+      // 5. เปิดใช้งาน jQuery UI Datepicker แบบภาษาไทยและปี พ.ศ. (ถ้ามีฟังก์ชันรองรับ)
+      if (typeof initThaiDatePicker === 'function') {
+        initThaiDatePicker('availCheckDate', function(selectedDate) {
+          var bkD = document.getElementById('bkDate');
+          if (bkD) bkD.value = selectedDate;
+          onBookingDateChanged();
+        });
+        initThaiDatePicker('bkDate', function(selectedDate) {
+          var availD = document.getElementById('availCheckDate');
+          if (availD) availD.value = selectedDate;
+          syncDateFromForm();
+        });
+      }
+
+      // 6. สร้างตัวเลือกเวลาเริ่มต้น-สิ้นสุด (กรองเวลาในอดีตทิ้งอัตโนมัติหากเป็นวันนี้)
       updateTimeSlotOptions();
+
+      // 7. เริ่มต้นระบบ Polling ตรวจสอบตัวเลข Badge แจ้งเตือน Real-time เบื้องหลัง
       startNotificationPolling();
 
+      // 8. เริ่มต้นปุ่มเข้าสู่ระบบด้วย Google Account (GIS)
       if (typeof initGoogleIdentityServices === 'function') {
         setTimeout(initGoogleIdentityServices, 300);
       }
 
+      // 9. นำทางไปยังหน้าเป้าหมายเริ่มต้น (หรือเปิดรายละเอียดจาก QR Code)
       var targetView = (window.APP_BOOT && window.APP_BOOT.initialPage && document.getElementById('view-' + window.APP_BOOT.initialPage))
         ? window.APP_BOOT.initialPage : 'dashboard';
       navigateTo(targetView);
     })
     .catch(function(err) {
-      Swal.fire({ icon: 'error', title: 'เชื่อมต่อระบบไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
+      Swal.fire({
+        icon: 'error',
+        title: 'เชื่อมต่อระบบไม่สำเร็จ',
+        text: err.message,
+        confirmButtonColor: '#0f4c81',
+        confirmButtonText: 'ลองใหม่อีกครั้ง'
+      });
     })
     .finally(function() {
       setLoading(false);
