@@ -393,33 +393,32 @@ function bootstrapApp() {
 
       // 4. ตั้งค่าวันที่เริ่มต้นสำหรับช่องเลือกวัน (วันนี้เป็นต้นไป)
       var today = todayIso();
-      ['availCheckDate', 'bkDate'].forEach(function(id) {
+      ['availCheckDate', 'bkDate', 'searchDate'].forEach(function(id) {
         var input = document.getElementById(id);
-        if (input) {
-          input.value = today;
-          input.min = today;
+        if (input && !input.value) {
+          input.value = (id === 'searchDate' ? '' : today); // ช่องค้นหาปล่อยว่างเพื่อให้ค้นหาทั้งหมดได้
+          if (id !== 'searchDate') input.min = today;
         }
       });
 
       // 5. เปิดใช้งานปฏิทิน Flatpickr สไตล์ Modern (ภาษาไทยและปี พ.ศ.)
       if (typeof initModernThaiCalendar === 'function') {
-        // ปฏิทินเช็คห้องว่างหน้าจอง
+        // ปฏิทินเช็คห้องว่างหน้าจอง (ด้านบน)
         initModernThaiCalendar('availCheckDate', function(selectedDate) {
           handleDateSelectionChange(selectedDate, 'availCheckDate');
         });
 
-        // ปฏิทินวันที่ในฟอร์มจอง
+        // ปฏิทินวันที่ในฟอร์มจอง (ด้านล่าง)
         initModernThaiCalendar('bkDate', function(selectedDate) {
           syncDateFromForm();
         });
 
-        // 🟢 เพิ่มปฏิทินค้นหาในหน้าสถิติและค้นหา (view-stats)
+        // ปฏิทินค้นหาในหน้าสถิติและค้นหา (view-stats)
         initModernThaiCalendar('searchDate', function(selectedDate) {
-          // เมื่อเลือกวันที่ค้นหา ให้เรียกฟังก์ชันค้นหาอัตโนมัติ (ถ้าต้องการ) หรือปล่อยไว้ให้กดปุ่มค้นหา
           runBookingSearch();
         });
       }
-      
+
       // 6. สร้างตัวเลือกเวลาเริ่มต้น-สิ้นสุด (กรองเวลาในอดีตทิ้งอัตโนมัติหากเป็นวันนี้)
       updateTimeSlotOptions();
 
