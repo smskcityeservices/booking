@@ -677,13 +677,26 @@ function onStartTimeChanged() { rebuildEndTimeOptions(); updateDurationBadge(); 
 function onEndTimeChanged() { updateDurationBadge(); }
 
 function updateDurationBadge() {
-  var startEl = document.getElementById('bkStart'); var endEl = document.getElementById('bkEnd'); var badge = document.getElementById('bookingDurationText');
+  var startEl = document.getElementById('bkStart');
+  var endEl = document.getElementById('bkEnd');
+  var badge = document.getElementById('bookingDurationText');
   if (!badge || !startEl || !endEl || !startEl.value || !endEl.value) return;
+
   var diff = timeToMinutes(endEl.value) - timeToMinutes(startEl.value);
-  if (diff <= { badge.innerHTML = '<i class="bi bi-exclamation-triangle"></i> เวลาไม่ถูกต้อง'; badge.style.background = '#fee2e2'; badge.style.color = '#991b1b'; return; }) // ป้องกัน syntax error
-  var h = Math.floor(diff / 60), m = diff % 60;
-  badge.innerHTML = '<i class="bi bi-hourglass-split"></i> รวม ' + (h > 0 ? h + ' ชม. ' : '') + (m > 0 ? m + ' นาที' : '');
-  badge.style.background = '#f0fdf4'; badge.style.color = '#166534';
+  if (diff <= 0) {
+    badge.innerHTML = '<i class="bi bi-exclamation-triangle"></i> เวลาไม่ถูกต้อง';
+    badge.style.background = '#fee2e2';
+    badge.style.color = '#991b1b';
+    return;
+  }
+  
+  var h = Math.floor(diff / 60);
+  var m = diff % 60;
+  var str = (h > 0 ? h + ' ชม. ' : '') + (m > 0 ? m + ' นาที' : '');
+  
+  badge.innerHTML = '<i class="bi bi-hourglass-split"></i> รวม ' + str;
+  badge.style.background = '#f0fdf4';
+  badge.style.color = '#166534';
 }
 
 function applyTimePreset(startTime, endTime, btn) {
