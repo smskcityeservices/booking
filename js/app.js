@@ -192,7 +192,38 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+function initThaiDatePicker(elementId, onSelectCallback) {
+    if (typeof jQuery === 'undefined' || !jQuery().datepicker) return;
 
+    jQuery('#' + elementId).datepicker({
+      dateFormat: 'yy-mm-dd', // ค่าเบื้องหลังเก็บเป็น ค.ศ. (YYYY-MM-DD) เพื่อส่งให้ระบบ Database
+      altField: '#' + elementId + '_display', // ช่องจำลองแสดงผล พ.ศ.
+      altFormat: 'dd M yy',
+      dayNamesMin: ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'],
+      monthNames: ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'],
+      monthNamesShort: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'],
+      onSelect: function(dateText) {
+        if (typeof onSelectCallback === 'function') {
+          onSelectCallback(dateText);
+        }
+      },
+      beforeShowDay: function(date) {
+        return [true, ''];
+      }
+    });
+
+    // แปลงปี ค.ศ. เป็น พ.ศ. บนปฏิทิน
+    jQuery('#' + elementId).datepicker('option', 'yearSuffix', ' ');
+    jQuery('#' + elementId).datepicker('option', 'beforeShow', function(input, inst) {
+      setTimeout(function() {
+        // ปรับแต่งปี พ.ศ. บนหัวปฏิทิน
+        var yearText = inst.dpDiv.find('.ui-datepicker-year').text();
+        if (yearText && parseInt(yearText, 10) < 2400) {
+          inst.dpDiv.find('.ui-datepicker-year').text(parseInt(yearText, 10) + 543);
+        }
+      }, 10);
+    });
+  }
 function openModal(id) {
   var el = document.getElementById(id);
   if (el) el.classList.add('show');
@@ -1000,47 +1031,72 @@ function switchPreviewMode(mode) {
  * Booking Flow, Summary Modal & Redirect to My Bookings
  * ======================================================================== */
 function onBookingDateChanged() {
-  var dateInput = document.getElementById('availCheckDate');
-  if (!dateInput || !dateInput.value) return;
-  var dateVal = dateInput.value;
+    var dateInput = document.getElementById('availCheckDate');
+    if (!dateInput || !dateInput.value) return;
+    var dateVal = dateInput.value;
 
-  var bkD = document.getElementById('bkDate');
-  if (bkD) bkD.value = dateVal;
-  var chkBox = document.getElementById('availabilityCheckBox');
-  if (chkBox) chkBox.innerHTML = '';
+    var bkD = document.getElementById('bkDate');
+    if (bkD) bkD.value = dateVal;
+    var chkBox = document.getElementById('availabilityCheckBox');
+    if (chkBox) chkBox.innerHTML = '';
 
-  var container = document.getElementById('roomAvailCards');
-  if (!container) return;
-  container.innerHTML = '<div style="color:var(--muted); padding:10px 0;">กำลังตรวจสอบห้องว่าง...</div>';
+    var container = document.getElementById('roomAvailCards');
+    if (!container) return;
+    container.innerHTML = '<div style="color:var(--muted); padding:10px 0;">กำลังตรวจสอบสถานะห้องประชุม...</div>';
 
-  updateTimeSlotOptions();
+    updateTimeSlotOptions();
 
-  callGas('getRoomAvailabilityForDate', dateVal)
-    .then(function(res) {
-      var rooms = res.data.rooms || [];
-      var currentSelected = document.getElementById('bkRoomId').value;
+    callGas('getRoomAvailabilityForDate', dateVal)
+      .then(function(res) {
+        var rooms = res.data.rooms || [];
+        var currentSelected = document.getElementById('bkRoomId').value;
 
-      var html = '';
-      rooms.forEach(function(r) {
-        var isFree = (r.statusType === 'FREE');
-        var dot = isFree ? '🟢' : '🔴';
-        var statusCls = isFree ? 'avail-free' : 'avail-busy';
-        var selectedCls = (r.RoomID === currentSelected) ? 'selected' : '';
+        var html = '';
+        rooms.forEach(function(r) {
+          var isFree = (r.statusType === 'FREE');
+          var dot = isFree ? '🟢' : '🔴';
+          var statusCls = isFree ? 'avail-free' : 'avail-busy';
+          var selectedCls = (r.RoomID === currentSelected) ? 'selected' : '';
 
-        html += '<div class="avail-item ' + selectedCls + '" data-room-id="' + escapeHtml(r.RoomID) + '" onclick="selectRoomFromAvail(\'' + escapeHtml(r.RoomID) + '\')">' +
-          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-          '<strong>' + escapeHtml(r.RoomName) + '</strong>' +
-          '<small style="color:var(--muted);">จุ ' + r.Capacity + ' คน</small>' +
-          '</div>' +
-          '<div class="avail-status ' + statusCls + '">' + dot + ' ' + escapeHtml(r.RoomName) + ' — ' + escapeHtml(r.summaryText) + '</div>' +
-          '</div>';
+          // จัดรูปแบบข้อความสถานะด้านล่าง (ตัดชื่อห้องออก แสดงเฉพาะผลลัพธ์และแยกบรรทัดการจอง)
+          var statusHtml = '';
+          if (isFree) {
+            statusHtml = '— ว่างทั้งวัน';
+          } else if (r.statusType === 'FULL') {
+            statusHtml = '— <span style="color:#dc2626; font-weight:600;">ไม่ว่างทั้งวัน</span>';
+            if (r.bookedSlots && r.bookedSlots.length > 0) {
+              statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
+              r.bookedSlots.forEach(function(s) {
+                statusHtml += '<div>• ช่วงเวลา ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
+              });
+              statusHtml += '</div>';
+            }
+          } else {
+            // กรณีไม่ว่างบางช่วง (Partial) แยกบรรทัดชัดเจน
+            statusHtml = '— <span style="color:#d97706; font-weight:600;">มีช่วงเวลาที่ไม่ว่าง:</span>';
+            if (r.bookedSlots && r.bookedSlots.length > 0) {
+              statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
+              r.bookedSlots.forEach(function(s) {
+                statusHtml += '<div>🔴 ถูกจอง ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
+              });
+              statusHtml += '</div>';
+            }
+          }
+
+          html += '<div class="avail-item ' + selectedCls + '" data-room-id="' + escapeHtml(r.RoomID) + '" onclick="selectRoomFromAvail(\'' + escapeHtml(r.RoomID) + '\')">' +
+            '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<strong>' + escapeHtml(r.RoomName) + '</strong>' +
+            '<small style="color:var(--muted);">ความจุ ' + r.Capacity + ' คน</small>' +
+            '</div>' +
+            '<div class="avail-status ' + statusCls + '" style="margin-top:6px;">' + dot + ' ' + statusHtml + '</div>' +
+            '</div>';
+        });
+        container.innerHTML = html;
+      })
+      .catch(function(err) {
+        container.innerHTML = '<div class="alert alert-danger">' + escapeHtml(err.message) + '</div>';
       });
-      container.innerHTML = html;
-    })
-    .catch(function(err) {
-      container.innerHTML = '<div class="alert alert-danger">' + escapeHtml(err.message) + '</div>';
-    });
-}
+  }
 
 function syncDateFromForm() {
   var d = document.getElementById('bkDate').value;
