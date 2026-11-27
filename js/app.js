@@ -458,52 +458,37 @@ function fetchNotificationBadgesSilent(isInitial) {
   if (!STATE.user.authenticated) return;
 
   // 1. สำหรับ Approver และ Admin: ดึงตัวเลขแจ้งเตือนคำขอรออนุมัติและผู้สมัครใหม่
-  if (['Admin', 'Approver'].indexOf(STATE.user.role) !== -1) {
-    callGas('getNotificationBadges', STATE.token)
-      .then(function(res) {
-        var data = res.data || { pendingBookings: 0, pendingUsers: 0, latestCancelled: null };
-        var newBookings = Number(data.pendingBookings) || 0;
-        var newUsers = Number(data.pendingUsers) || 0;
+  if (['Admin', 'Approver'].indexOf(STATE.user.role) !== -1 && data.latestCancelled) {
+        var cancelObj = data.latestCancelled;
+        var cancelKey = cancelObj.bookingId + '_' + cancelObj.cancelDate;
+        var lastAckCancel = localStorage.getItem('LAST_ACK_CANCEL_KEY') || '';
 
-        updatePendingBadgeCount(newBookings);
-        if (STATE.user.role === 'Admin') {
-          updateAdminPendingBadge(newUsers);
-        }
-
-        var totalAlert = newBookings + (STATE.user.role === 'Admin' ? newUsers : 0);
-        document.title = (totalAlert > 0 ? '(' + totalAlert + ') ' : '') + 'ระบบจองห้องประชุมออนไลน์ | เทศบาลเมืองสมุทรสงคราม';
-
-        // 👇 --- นำโค้ดตรวจสอบการยกเลิกมาวางไว้ตรงนี้ --- 👇
-        if (['Admin', 'Approver'].indexOf(STATE.user.role) !== -1 && data.latestCancelled) {
-          var cancelObj = data.latestCancelled;
-          var cancelKey = cancelObj.bookingId + '_' + cancelObj.cancelDate;
-          var lastAckCancel = localStorage.getItem('LAST_ACK_CANCEL_KEY') || '';
-
-          if (isInitial) {
-            if (!lastAckCancel) {
-              localStorage.setItem('LAST_ACK_CANCEL_KEY', cancelKey);
-            }
-          } else if (cancelKey !== lastAckCancel) {
+        if (isInitial) {
+          if (!lastAckCancel) {
             localStorage.setItem('LAST_ACK_CANCEL_KEY', cancelKey);
+          }
+        } else if (cancelKey !== lastAckCancel) {
+          localStorage.setItem('LAST_ACK_CANCEL_KEY', cancelKey);
 
-            // เด้ง Popup แจ้งเตือน Admin ทันที
-            Swal.fire({
-              icon: 'warning',
-              title: '⚠️ มีการยกเลิกการจองห้องประชุม!',
-              html: '<div style="text-align:left; font-size:14px; line-height:1.6;">' +
-                    'ห้องประชุม: <strong>' + escapeHtml(cancelObj.roomName) + '</strong><br>' +
-                    'หัวข้อ: <strong>' + escapeHtml(cancelObj.topic) + '</strong><br>' +
-                    'วันที่ใช้งาน: ' + formatDisplayDateThai(cancelObj.date) + '<br>' +
-                    'ผู้จอง: ' + escapeHtml(cancelObj.bookerName) + ' (' + escapeHtml(cancelObj.department) + ')<br>' +
-                    '<div style="margin-top:10px; padding:10px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; color:#991b1b; font-size:13px;">' +
-                    '<strong>เหตุผลการยกเลิก:</strong> ' + escapeHtml(cancelObj.cancelReason || 'ไม่ระบุ') + '</div>' +
-                    '</div>',
-              confirmButtonColor: '#0f4c81',
-              confirmButtonText: 'รับทราบ'
-            });
+          // เด้ง Popup แจ้งเตือน Admin ทันที
+          Swal.fire({
+            icon: 'warning',
+            title: '⚠️ มีการยกเลิกการจองห้องประชุม!',
+            html: '<div style="text-align:left; font-size:14px; line-height:1.6;">' +
+                  'รหัสการจอง: <strong>' + escapeHtml(cancelObj.bookingId) + '</strong><br>' +
+                  'ห้องประชุม: <strong>' + escapeHtml(cancelObj.roomName) + '</strong><br>' +
+                  'หัวข้อ: <strong>' + escapeHtml(cancelObj.topic) + '</strong><br>' +
+                  'วันที่ใช้งาน: ' + formatDisplayDateThai(cancelObj.date) + '<br>' +
+                  'ผู้จอง: ' + escapeHtml(cancelObj.bookerName) + ' (' + escapeHtml(cancelObj.department) + ')<br>' +
+                  '<div style="margin-top:10px; padding:10px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; color:#991b1b; font-size:13px;">' +
+                  '<strong>เหตุผลการยกเลิก:</strong> ' + escapeHtml(cancelObj.cancelReason || 'ไม่ระบุ') + '</div>' +
+                  '</div>',
+            confirmButtonColor: '#0f4c81',
+            confirmButtonText: 'รับทราบ'
+          });
 
-            // อัปเดตหน้า Dashboard, หน้ารออนุมัติ และปฏิทินทันที
-            refreshActiveViews();
+          // อัปเดตหน้า Dashboard, หน้ารออนุมัติ และปฏิทินทันที
+          refreshActiveViews();
           }
         }
         // 👆 ----------------------------------------------- 👆
