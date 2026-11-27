@@ -529,7 +529,7 @@ function fetchNotificationBadgesSilent(isInitial) {
       })
       .catch(function() {});
   }
-
+}
   // 2. สำหรับบุคลากรทุกคน: อัปเดต Badge รายการจองของฉัน และตรวจจับผลอนุมัติ
   callGas('searchBookings', STATE.token, { myOnly: true, userEmail: STATE.user.email })
     .then(function(res) {
