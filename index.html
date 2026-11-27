@@ -330,19 +330,27 @@
 
         <!-- View: Booking -->
         <section class="app-view" id="view-booking">
-  <!-- ขั้นตอนที่ 1: ตรวจสอบสถานะห้องว่างอัตโนมัติรายวัน -->
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title"><i class="bi bi-calendar2-check"></i> 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน</div>
-      <div style="display:flex; align-items:center; gap:8px;">
-        <label for="availCheckDate" style="margin:0; font-size:14px; font-weight:600;">วันที่ใช้งาน:</label>
-        
-        <!-- ========================================== -->
-        <!-- 📌 นำโค้ดนี้มาวางแทนที่ช่อง input วันที่เดิมตรงนี้ -->
-        <!-- ========================================== -->
-        <input type="text" id="availCheckDate" placeholder="วว/ดด/ปปปป" style="font-weight:600; background:#fff; cursor:pointer;" readonly>
+  <!-- โครงสร้างส่วนตรวจสอบสถานะห้องว่างอัตโนมัติ (ปรับใหม่ให้อยู่ขวาสุด) -->
+<div class="card mb-4" style="padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+    <div style="font-weight: 700; font-size: 16px; color: #0f4c81;">
+      <i class="bi bi-calendar-check"></i> 1. ตรวจสอบสถานะห้องว่างอัตโนมัติประจำวัน
+    </div>
+    
+    <!-- ช่องเลือกวันที่วางไว้ขวาสุด ออกแบบเป็นการ์ดเลือกวัน -->
+    <div style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 6px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+      <label for="availCheckDate" style="font-size: 13.5px; font-weight: 600; color: #475569; margin: 0; white-space: nowrap;">
+        <i class="bi bi-calendar3"></i> วันที่ใช้งาน:
+      </label>
+      <input type="text" id="availCheckDate" class="form-control" style="background: #fff; cursor: pointer; width: 140px; text-align: center; font-weight: 600;" placeholder="-- เลือกวันที่ --" readonly>
+    </div>
+  </div>
 
-      </div>
+  <!-- แถวแสดงการ์ดห้องว่างรายวัน -->
+  <div id="roomAvailCards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px;">
+    <!-- เรนเดอร์การ์ดห้องว่างโดย JavaScript -->
+  </div>
+</div>
     </div>
     <div class="avail-list" id="roomAvailCards">
       <div style="color:var(--muted); padding:10px 0;">กำลังโหลดสถานะห้องประชุม...</div>
