@@ -2333,6 +2333,74 @@ function handleGoogleSignInCallback(response) {
       setLoading(false);
     });
 }
+function updateAuthUI() {
+  var headerBox = document.getElementById('headerUserBox');
+  var authBtn = document.getElementById('authActionBtn');
+  var adminNav = document.getElementById('navAdminBtn');
+  var sidebarBox = document.getElementById('sidebarUserBox');
+
+  if (STATE.user && STATE.user.authenticated) {
+    if (headerBox) headerBox.style.display = 'flex';
+    if (authBtn) authBtn.style.display = 'none';
+
+    var initialLetter = (STATE.user.name || 'U').charAt(0).toUpperCase();
+    var avHead = document.getElementById('headerUserAvatar');
+    if (avHead) avHead.textContent = initialLetter;
+
+    var uName = document.getElementById('headerUserName');
+    if (uName) uName.textContent = STATE.user.name;
+
+    var uDept = document.getElementById('headerUserDept');
+    if (uDept) uDept.textContent = STATE.user.department || 'บุคลากร';
+
+    var uRole = document.getElementById('headerUserRole');
+    if (uRole) {
+      uRole.textContent = STATE.user.role;
+      uRole.className = 'role-badge ' + (STATE.user.role || 'User');
+    }
+
+    if (sidebarBox) {
+      sidebarBox.style.display = 'flex';
+      var avSide = document.getElementById('sidebarUserAvatar');
+      if (avSide) avSide.textContent = initialLetter;
+      var sName = document.getElementById('sidebarUserName');
+      if (sName) sName.textContent = STATE.user.name;
+      var sDept = document.getElementById('sidebarUserDept');
+      if (sDept) sDept.textContent = STATE.user.department || STATE.user.role;
+    }
+
+    var canAdmin = (['Admin', 'Approver'].indexOf(STATE.user.role) !== -1);
+    if (adminNav) adminNav.style.display = canAdmin ? 'flex' : 'none';
+
+    document.querySelectorAll('#navApprovalBtn').forEach(function(el) {
+      el.style.display = canAdmin ? 'flex' : 'none';
+    });
+
+    document.querySelectorAll('.auth-required-nav, .auth-required-mobile').forEach(function(el) {
+      el.style.display = (el.tagName === 'BUTTON' ? 'flex' : 'block');
+    });
+
+    var bkN = document.getElementById('bkName');
+    if (bkN) bkN.value = STATE.user.name || '';
+    var bkE = document.getElementById('bkEmail');
+    if (bkE) bkE.value = STATE.user.email || '';
+    var bkD = document.getElementById('bkDept');
+    if (bkD && STATE.user.department) bkD.value = STATE.user.department;
+    var bkP = document.getElementById('bkPhone');
+    if (bkP && STATE.user.phone) bkP.value = STATE.user.phone;
+
+    var myEmailInp = document.getElementById('myBookingEmailInput');
+    if (myEmailInp) myEmailInp.value = STATE.user.email || '';
+
+  } else {
+    if (headerBox) headerBox.style.display = 'none';
+    if (sidebarBox) sidebarBox.style.display = 'none';
+    if (adminNav) adminNav.style.display = 'none';
+    document.querySelectorAll('#navApprovalBtn').forEach(function(el) { el.style.display = 'none'; });
+    document.querySelectorAll('.auth-required-nav, .auth-required-mobile').forEach(function(el) { el.style.display = 'none'; });
+    if (authBtn) authBtn.style.display = 'inline-flex';
+  }
+}
 
 function openProfileModal() {
   if (!STATE.user || !STATE.user.authenticated) {
