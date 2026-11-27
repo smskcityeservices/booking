@@ -1473,7 +1473,8 @@ function loadCalendarEvents() {
   var filterEl = document.getElementById('calendarRoomFilter');
   var roomId = filterEl ? filterEl.value : '';
   var legendEl = document.getElementById('calendarLegend');
-  if (legendEl) {
+  
+  if (legendEl && STATE.rooms) {
     legendEl.innerHTML = STATE.rooms.map(function(r) {
       return '<span class="legend-item"><span class="legend-dot" style="background:' + escapeHtml(r.Color) + '"></span>' + escapeHtml(r.RoomName) + '</span>';
     }).join('');
@@ -1489,6 +1490,7 @@ function loadCalendarEvents() {
       if (STATE.calendarInstance) {
         STATE.calendarInstance.destroy();
       }
+
       STATE.calendarInstance = new FullCalendar.Calendar(el, {
         locale: 'th',
         initialView: window.innerWidth < 640 ? 'listMonth' : 'dayGridMonth',
@@ -1499,7 +1501,14 @@ function loadCalendarEvents() {
           center: 'title',
           right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
         },
-        buttonText: { today: 'วันนี้', month: 'เดือน', week: 'สัปดาห์', day: 'วัน', listMonth: 'รายการ' },
+        buttonText: {
+          today: 'วันนี้',
+          month: 'เดือน',
+          week: 'สัปดาห์',
+          day: 'วัน',
+          listMonth: 'รายการ'
+        },
+        // ปรับแต่งการแสดงผลในมุมมองแบบรายการ (List View)
         views: {
           listMonth: {
             eventContent: function(arg) {
@@ -1508,7 +1517,7 @@ function loadCalendarEvents() {
                 html:
                   '<div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; width:100%;">' +
                     '<div>' +
-                      '<div style="font-weight:700; color:#0f4c81;">' + escapeHtml(arg.event.title) + '</div>' +
+                      '<div style="font-weight:700; color:#0f4c81; font-size:14px;">' + escapeHtml(arg.event.title) + '</div>' +
                       '<div style="font-size:12.5px; color:#64748b; margin-top:2px;">' +
                         '<i class="bi bi-person"></i> ' + escapeHtml(p.BookerName || '-') +
                         (p.Department ? ' (' + escapeHtml(p.Department) + ')' : '') +
@@ -1524,17 +1533,26 @@ function loadCalendarEvents() {
         events: events,
         eventClick: function(info) {
           var p = info.event.extendedProps;
-          if (p && p.BookingID) openBookingDetailModal(p.BookingID);
+          if (p && p.BookingID) {
+            openBookingDetailModal(p.BookingID);
+          }
         }
       });
       STATE.calendarInstance.render();
 
+      // ป้องกันปัญหาปฏิทินไม่แสดงผลเต็มขนาดเมื่อเปลี่ยนแท็บ
       setTimeout(function() {
-        if (STATE.calendarInstance) STATE.calendarInstance.updateSize();
+        if (STATE.calendarInstance) {
+          STATE.calendarInstance.updateSize();
+        }
       }, 120);
     })
-    .catch(function(err) { showToast(err.message, 'error'); })
-    .finally(function() { setLoading(false); });
+    .catch(function(err) {
+      showToast(err.message, 'error');
+    })
+    .finally(function() {
+      setLoading(false);
+    });
 }
 
 /* ==========================================================================
