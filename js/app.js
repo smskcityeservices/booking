@@ -1348,8 +1348,9 @@ function cancelMyBooking(bookingId) {
   }).then(function(result) {
     if (result.isConfirmed) {
       setLoading(true, 'กำลังดำเนินการยกเลิกและแจ้งเตือนผู้ดูแล...');
+      // 📌 ส่งค่า cancelReason ไปในออบเจกต์ payload
       callGas('cancelBooking', STATE.token, { bookingId: bookingId, cancelReason: result.value.trim() })
-        .then(function() {
+        .then(function(res) {
           Swal.fire({
             icon: 'success',
             title: 'ยกเลิกการจองสำเร็จ',
