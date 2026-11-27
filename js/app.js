@@ -1558,7 +1558,12 @@ function loadCalendarEvents() {
 /* ==========================================================================
  * Authentication, Google Identity Services (GIS) & Profile Management
  * ======================================================================== */
-function openLoginModal() { openModal('loginModal'); }
+/**
+ * เปิดหน้าต่าง Modal สำหรับเข้าสู่ระบบหรือลงทะเบียน
+ */
+function openLoginModal() {
+  openModal('loginModal');
+}
 
 function switchAuthTab(mode) {
   var tabL = document.getElementById('authTabLogin');
