@@ -553,10 +553,16 @@ function refreshActiveViews() {
   var approvalView = document.getElementById('view-approval');
   var dashView = document.getElementById('view-dashboard');
   var adminView = document.getElementById('view-admin');
+  var calView = document.getElementById('view-calendar');
 
   if (approvalView && approvalView.classList.contains('active')) loadApprovalViewData();
   if (dashView && dashView.classList.contains('active')) loadDashboard();
   if (adminView && adminView.classList.contains('active')) loadAdminBookings();
+  
+  // อัปเดตตารางปฏิทินทันทีหากเปิดหน้านั้นอยู่ หรือดึงข้อมูลใหม่
+  if (calView && calView.classList.contains('active')) {
+    loadCalendarEvents();
+  }
 }
 
 function refreshActiveUsersTab() {
@@ -1131,6 +1137,9 @@ function executeBookingSubmit(payload) {
       }
 
       refreshBadgesImmediately();
+      if (typeof loadCalendarEvents === 'function') {
+        loadCalendarEvents(); // อัปเดตข้อมูลในปฏิทินทันที
+      }
 
       document.getElementById('bookingForm').reset();
       document.getElementById('bkDate').value = payload.date;
@@ -1217,6 +1226,9 @@ function quickBookRoom(roomId) {
   setTimeout(function() { selectRoomFromAvail(roomId); }, 150);
 }
 
+/**
+ * โหลดและแสดงรายการจองของฉัน พร้อมอัปเดตตัวเลข Badge และตรวจสอบสถานะอนุมัติ
+ */
 function loadMyBookings() {
   var emailInput = document.getElementById('myBookingEmailInput').value.trim();
   var tbody = document.getElementById('myBookingsBody');
@@ -1231,11 +1243,15 @@ function loadMyBookings() {
   callGas('searchBookings', STATE.token, { myOnly: true, userEmail: emailInput })
     .then(function(res) {
       var list = res.data || [];
+      
+      // คำนวณจำนวนรายการจองที่ยัง Active อยู่ (รออนุมัติ หรือ อนุมัติแล้ว) เพื่อนําไปแสดง Badge สีแดง
       var activeCount = list.filter(function(x) {
         var st = x.EffectiveStatus || x.Status;
         return st === 'รออนุมัติ' || st === 'อนุมัติ';
       }).length;
       updateMyBookingsBadge(activeCount);
+      
+      // ตรวจสอบและเด้ง Popup แจ้งผลการอนุมัติ/ไม่อนุมัติอัตโนมัติ
       checkBookerStatusUpdates(list);
 
       if (list.length === 0) {
@@ -1262,15 +1278,19 @@ function loadMyBookings() {
           '<td>' + escapeHtml(b.Topic) + '</td>' +
           '<td>' + statusBadge(st) + statusHint + '</td>' +
           '<td style="white-space:nowrap;">' +
-          '<button class="btn btn-outline btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-qr-code"></i></button> ' +
+          '<button class="btn btn-outline btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')" title="ดูรายละเอียด & QR Code"><i class="bi bi-qr-code"></i></button> ' +
           cancelBtn +
           '</td>' +
           '</tr>';
       });
       tbody.innerHTML = html;
     })
-    .catch(function(err) { showToast(err.message, 'error'); })
-    .finally(function() { setLoading(false); });
+    .catch(function(err) {
+      showToast(err.message, 'error');
+    })
+    .finally(function() {
+      setLoading(false);
+    });
 }
 
 function cancelMyBooking(bookingId) {
