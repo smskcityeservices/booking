@@ -3311,3 +3311,4 @@ function loadAdminAudit() {
 
     renderApprovalTable(filtered);
   }
+};
