@@ -1654,23 +1654,26 @@ function renderRoomsDirectory() {
   var html = '';
   STATE.rooms.forEach(function(r) {
     var img = r.ImageURL || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800';
-    html += '<div class="room-card">' +
-      '<img class="room-img" src="' + escapeHtml(img) + '" alt="' + escapeHtml(r.RoomName) + '">' +
-      '<div class="room-body">' +
-      '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-      '<strong style="font-size:17px; color:var(--primary);">' + escapeHtml(r.RoomName) + '</strong>' +
-      '<span class="badge badge-approved">' + r.Capacity + ' ที่นั่ง</span>' +
+    
+    // ปรับปรุงเลย์เอาต์การ์ดห้องประชุมให้มีความสูงคงที่ รูปภาพขนาดพอดี และจัดวางปุ่มจองไว้ชิดล่างเสมอ
+    html += '<div style="background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 1px 3px 0 rgba(0,0,0,0.05);">' +
+      '<div style="position:relative; height:200px; background:#e2e8f0; overflow:hidden;">' +
+        '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(r.RoomName) + '" style="width:100%; height:100%; object-fit:cover;">' +
+        '<span class="badge badge-approved" style="position:absolute; top:12px; right:12px; font-weight:700; box-shadow:0 2px 4px rgba(0,0,0,0.15);">' + r.Capacity + ' ที่นั่ง</span>' +
       '</div>' +
-      '<div class="room-meta"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.Building) + ' ' + escapeHtml(r.Floor) + '</div>' +
-      '<p style="font-size:13.5px; margin-bottom:8px;">' + escapeHtml(r.Description) + '</p>' +
-      '<div style="font-size:13px; color:var(--muted); margin-bottom:12px;">' +
-      '<strong>อุปกรณ์:</strong> ' + escapeHtml(r.Equipment) + '<br>' +
-      '<strong>ผู้รับผิดชอบ:</strong> ' + escapeHtml(r.Responsible || '-') +
+      '<div style="padding:18px; flex-grow:1; display:flex; flex-direction:column;">' +
+        '<h3 style="font-size:18px; color:var(--primary); font-weight:700; margin-bottom:6px;">' + escapeHtml(r.RoomName) + '</h3>' +
+        '<div style="font-size:13.5px; color:var(--muted); margin-bottom:10px;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.Building) + ' ชั้น ' + escapeHtml(r.Floor) + '</div>' +
+        '<p style="font-size:13.5px; color:#475569; margin-bottom:12px; line-height:1.5;">' + escapeHtml(r.Description || 'ไม่มีรายละเอียดเพิ่มเติม') + '</p>' +
+        '<div style="font-size:13px; color:var(--muted); margin-bottom:16px; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #f1f5f9;">' +
+          '<div style="margin-bottom:4px;"><strong>อุปกรณ์:</strong> ' + escapeHtml(r.Equipment || '-') + '</div>' +
+          '<div><strong>ผู้รับผิดชอบ:</strong> ' + escapeHtml(r.Responsible || '-') + '</div>' +
+        '</div>' +
+        '<button class="btn btn-primary btn-sm" style="margin-top:auto; width:100%; justify-content:center;" onclick="quickBookRoom(\'' + escapeHtml(r.RoomID) + '\')">' +
+          '<i class="bi bi-calendar-plus"></i> จองห้องนี้' +
+        '</button>' +
       '</div>' +
-      '<button class="btn btn-primary btn-sm" style="margin-top:auto;" onclick="quickBookRoom(\'' + escapeHtml(r.RoomID) + '\')">' +
-      '<i class="bi bi-calendar-plus"></i> จองห้องนี้' +
-      '</button>' +
-      '</div></div>';
+    '</div>';
   });
   grid.innerHTML = html;
 }
