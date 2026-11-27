@@ -408,3 +408,34 @@
     background: var(--primary) !important;
     color: #fff !important;
   }
+/* ปรับแต่ง Flatpickr ให้สวยงามสไตล์ Modern */
+  .flatpickr-calendar {
+    font-family: 'Sarabun', sans-serif !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 30px rgba(15, 76, 129, 0.15) !important;
+    border: 1px solid var(--border) !important;
+    padding: 10px !important;
+  }
+  .flatpickr-months .flatpickr-month {
+    background: var(--primary) !important;
+    color: #fff !important;
+    border-radius: 8px 8px 0 0;
+    fill: #fff !important;
+  }
+  .flatpickr-current-month .flatpickr-monthDropdown-months,
+  .flatpickr-current-month input.cur-year {
+    font-family: 'Sarabun', sans-serif !important;
+    font-weight: 700 !important;
+  }
+  .flatpickr-day.selected, .flatpickr-day.selected:hover {
+    background: var(--primary-light) !important;
+    border-color: var(--primary-light) !important;
+    border-radius: 8px !important;
+  }
+  .flatpickr-day.today {
+    border-color: var(--teal) !important;
+    border-radius: 8px !important;
+  }
+  .flatpickr-day:hover {
+    border-radius: 8px !important;
+  }
