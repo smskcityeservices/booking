@@ -697,8 +697,36 @@ function rebuildEndTimeOptions() {
   updateDurationBadge();
 }
 
-function onStartTimeChanged() { rebuildEndTimeOptions(); }
-function onEndTimeChanged() { updateDurationBadge(); }
+function onStartTimeChanged() {
+  rebuildEndTimeOptions();
+  updateDurationBadge();
+}
+
+function onEndTimeChanged() {
+  updateDurationBadge();
+}
+
+function minutesToTime(mins) {
+  var hh = Math.floor(mins / 60);
+  var mm = mins % 60;
+  return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+}
+
+function timeToMinutes(hhmm) {
+  var p = String(hhmm).split(':');
+  return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+}
+function ensureTimeOptionExists(selectEl, timeVal) {
+  if (!selectEl || !timeVal) return;
+  for (var i = 0; i < selectEl.options.length; i++) {
+    if (selectEl.options[i].value === timeVal) return;
+  }
+  var opt = document.createElement('option');
+  opt.value = timeVal;
+  opt.textContent = timeVal + ' น.';
+  selectEl.appendChild(opt);
+}
+
 
 function updateDurationBadge() {
   var start = document.getElementById('bkStart').value;
@@ -985,6 +1013,607 @@ function switchPreviewMode(mode) {
     if (btnDia) btnDia.className = 'btn btn-outline btn-sm';
   }
 }
+/* ==========================================================================
+ * Hybrid Authentication & User Profile Management
+ * ======================================================================== */
+function openLoginModal() {
+  openModal('loginModal');
+}
+
+function openProfileModal() {
+  if (!STATE.user || !STATE.user.authenticated) {
+    openLoginModal();
+    return;
+  }
+
+  // 1. นำข้อมูลปัจจุบันมาแสดงในฟอร์ม
+  document.getElementById('profEmail').value = STATE.user.email || '';
+  document.getElementById('profName').value = STATE.user.name || '';
+  document.getElementById('profPhone').value = STATE.user.phone || '';
+  document.getElementById('profPass').value = '';
+
+  // 2. เติมตัวเลือกหน่วยงาน (กอง/สำนัก) และเลือกค่าเดิมไว้
+  var deptSel = document.getElementById('profDept');
+  if (deptSel && STATE.departments) {
+    var deptHtml = '<option value="">-- เลือกกอง/สำนัก --</option>';
+    STATE.departments.forEach(function(d) {
+      var sel = (d === STATE.user.department) ? 'selected' : '';
+      deptHtml += '<option value="' + escapeHtml(d) + '" ' + sel + '>' + escapeHtml(d) + '</option>';
+    });
+    deptSel.innerHTML = deptHtml;
+  }
+
+  // 3. จัดการสถานะและการแสดงผลการผูกบัญชี Google Account
+  var gBadge = document.getElementById('profGoogleBadge');
+  var gAction = document.getElementById('profGoogleActionWrap');
+
+  if (gBadge && gAction) {
+    var isLinked = Boolean(STATE.user.googleLinked);
+    gBadge.className = 'badge ' + (isLinked ? 'badge-approved' : 'badge-cancelled');
+    gBadge.textContent = isLinked ? 'ผูกแล้ว' : 'ยังไม่ผูก';
+
+    if (isLinked) {
+      gAction.innerHTML = 
+        '<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">' +
+          '<small style="color:#16a34a;"><i class="bi bi-check-circle-fill"></i> ผูกกับบัญชี Google เรียบร้อยแล้ว</small>' +
+          '<button type="button" class="btn btn-outline btn-sm" onclick="unlinkGoogleClick()" style="color:#dc2626; border-color:#fca5a5; padding:4px 10px;">' +
+            '<i class="bi bi-x-circle"></i> ยกเลิกการผูก' +
+          '</button>' +
+        '</div>';
+    } else {
+      gAction.innerHTML = 
+        '<div>' +
+          '<small style="color:var(--muted); display:block; margin-bottom:6px;">คุณสามารถผูกบัญชี Google เพื่อใช้เข้าสู่ระบบได้สะดวกรวดเร็ว</small>' +
+          '<div id="googleLinkBtnWrap"></div>' +
+        '</div>';
+
+      // เรนเดอร์ปุ่ม Google สำหรับผูกบัญชี
+      if (typeof google !== 'undefined' && google.accounts && typeof GOOGLE_CLIENT_ID !== 'undefined' && GOOGLE_CLIENT_ID.indexOf('apps.googleusercontent.com') !== -1) {
+        try {
+          google.accounts.id.renderButton(document.getElementById('googleLinkBtnWrap'), {
+            theme: 'outline',
+            size: 'medium',
+            text: 'continue_with',
+            shape: 'pill',
+            locale: 'th'
+          });
+        } catch (e) {}
+      }
+    }
+  }
+
+  openModal('profileModal');
+}
+
+/**
+ * ยกเลิกการผูกบัญชี Google Account ของผู้ใช้งานปัจจุบัน
+ */
+function unlinkGoogleClick() {
+  Swal.fire({
+    title: 'ยกเลิกการผูกบัญชี Google?',
+    text: 'หลังจากยกเลิกแล้ว คุณจะต้องเข้าสู่ระบบด้วยอีเมลและรหัสผ่าน/PIN แทน',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc2626',
+    cancelButtonColor: '#64748b',
+    confirmButtonText: 'ยืนยันยกเลิกการผูก',
+    cancelButtonText: 'ปิด'
+  }).then(function(result) {
+    if (result.isConfirmed) {
+      setLoading(true, 'กำลังยกเลิกการผูกบัญชี...');
+      callGas('toggleGoogleBinding', STATE.token, { actionType: 'unlink' })
+        .then(function(res) {
+          STATE.user.googleLinked = false;
+          openProfileModal(); // รีเฟรชสถานะใน Modal ทันที
+          Swal.fire({
+            icon: 'success',
+            title: 'ยกเลิกการผูกสำเร็จ',
+            text: res.message || 'ยกเลิกการผูกบัญชี Google เรียบร้อยแล้ว',
+            confirmButtonColor: '#0f4c81',
+            timer: 2000,
+            timerProgressBar: true
+          });
+        })
+        .catch(function(err) {
+          Swal.fire({
+            icon: 'error',
+            title: 'เกิดข้อผิดพลาด',
+            text: err.message,
+            confirmButtonColor: '#0f4c81',
+            confirmButtonText: 'ตกลง'
+          });
+        })
+        .finally(function() {
+          setLoading(false);
+        });
+    }
+  });
+}
+
+function submitProfileUpdate(e) {
+  e.preventDefault();
+  setLoading(true, 'กำลังบันทึกข้อมูลโปรไฟล์...');
+  var payload = {
+    name: document.getElementById('profName').value.trim(),
+    department: document.getElementById('profDept').value,
+    phone: document.getElementById('profPhone').value.trim(),
+    passcode: document.getElementById('profPass').value.trim()
+  };
+
+  callGas('updateUserProfile', STATE.token, payload)
+    .then(function(res) {
+      STATE.user.name = res.data.name;
+      STATE.user.department = res.data.department;
+      STATE.user.phone = res.data.phone;
+
+      updateAuthUI();
+      closeModal('profileModal');
+
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกโปรไฟล์สำเร็จ!',
+        text: 'ข้อมูลเบอร์โทรศัพท์และหน่วยงานได้รับการอัปเดตแล้ว',
+        confirmButtonColor: '#0f4c81',
+        confirmButtonText: 'ตกลง'
+      });
+    })
+    .catch(function(err) {
+      Swal.fire({ icon: 'error', title: 'ไม่สามารถบันทึกได้', text: err.message, confirmButtonColor: '#0f4c81' });
+    })
+    .finally(function() { setLoading(false); });
+}
+
+function updateAuthUI() {
+  var headerBox = document.getElementById('headerUserBox');
+  var authBtn = document.getElementById('authActionBtn');
+  var adminNav = document.getElementById('navAdminBtn');
+  var sidebarBox = document.getElementById('sidebarUserBox');
+
+  if (STATE.user && STATE.user.authenticated) {
+    if (headerBox) headerBox.style.display = 'flex';
+    if (authBtn) authBtn.style.display = 'none';
+
+    var initialLetter = (STATE.user.name || 'U').charAt(0).toUpperCase();
+    var avHead = document.getElementById('headerUserAvatar');
+    if (avHead) avHead.textContent = initialLetter;
+
+    var uName = document.getElementById('headerUserName');
+    if (uName) uName.textContent = STATE.user.name;
+
+    var uDept = document.getElementById('headerUserDept');
+    if (uDept) uDept.textContent = STATE.user.department || 'บุคลากร';
+
+    var uRole = document.getElementById('headerUserRole');
+    if (uRole) {
+      uRole.textContent = STATE.user.role;
+      uRole.className = 'role-badge ' + (STATE.user.role || 'User');
+    }
+
+    if (sidebarBox) {
+      sidebarBox.style.display = 'flex';
+      var avSide = document.getElementById('sidebarUserAvatar');
+      if (avSide) avSide.textContent = initialLetter;
+      var sName = document.getElementById('sidebarUserName');
+      if (sName) sName.textContent = STATE.user.name;
+      var sDept = document.getElementById('sidebarUserDept');
+      if (sDept) sDept.textContent = STATE.user.department || STATE.user.role;
+    }
+
+    var canAdmin = (['Admin', 'Approver'].indexOf(STATE.user.role) !== -1);
+    if (adminNav) adminNav.style.display = canAdmin ? 'flex' : 'none';
+
+    document.querySelectorAll('#navApprovalBtn').forEach(function(el) {
+      el.style.display = canAdmin ? 'flex' : 'none';
+    });
+
+    document.querySelectorAll('.auth-required-nav, .auth-required-mobile').forEach(function(el) {
+      el.style.display = (el.tagName === 'BUTTON' ? 'flex' : 'block');
+    });
+
+    var bkN = document.getElementById('bkName');
+    if (bkN) bkN.value = STATE.user.name || '';
+    var bkE = document.getElementById('bkEmail');
+    if (bkE) bkE.value = STATE.user.email || '';
+    var bkD = document.getElementById('bkDept');
+    if (bkD && STATE.user.department) bkD.value = STATE.user.department;
+    var bkP = document.getElementById('bkPhone');
+    if (bkP && STATE.user.phone) bkP.value = STATE.user.phone;
+
+    var myEmailInp = document.getElementById('myBookingEmailInput');
+    if (myEmailInp) myEmailInp.value = STATE.user.email || '';
+
+  } else {
+    if (headerBox) headerBox.style.display = 'none';
+    if (sidebarBox) sidebarBox.style.display = 'none';
+    if (adminNav) adminNav.style.display = 'none';
+    document.querySelectorAll('#navApprovalBtn').forEach(function(el) { el.style.display = 'none'; });
+    document.querySelectorAll('.auth-required-nav, .auth-required-mobile').forEach(function(el) { el.style.display = 'none'; });
+    if (authBtn) authBtn.style.display = 'inline-flex';
+  }
+}
+
+function handleLogout() {
+    Swal.fire({
+      title: 'ออกจากระบบ?',
+      text: 'คุณต้องการออกจากระบบและล้างสถานะการเข้าใช้งานปัจจุบันใช่หรือไม่',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ออกจากระบบ',
+      cancelButtonText: 'ยกเลิก'
+    }).then(function(result) {
+      if (result.isConfirmed) {
+        setLoading(true, 'กำลังออกจากระบบ...');
+        callGas('logoutSession', STATE.token)
+          .catch(function() {})
+          .finally(function() {
+            // ล้าง Token ออกจาก Session ทั้งหมด
+            sessionStorage.removeItem('MRB_AUTH_TOKEN');
+            localStorage.removeItem('MRB_AUTH_TOKEN');
+            STATE.token = '';
+            STATE.user = { authenticated: false, role: 'Guest', email: '', name: '', department: '', phone: '' };
+            
+            // ปิดระบบแจ้งเตือนและรีเซ็ตหน้าจอ
+            stopNotificationPolling();
+            updateAuthUI();
+            setLoading(false);
+            showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
+            navigateTo('dashboard');
+          });
+      }
+    });
+  }
+
+function switchAuthTab(mode) {
+  var tabL = document.getElementById('authTabLogin');
+  var tabR = document.getElementById('authTabRegister');
+  var formL = document.getElementById('loginForm');
+  var formR = document.getElementById('registerForm');
+  if (tabL) tabL.classList.toggle('active', mode === 'login');
+  if (tabR) tabR.classList.toggle('active', mode === 'register');
+  if (formL) formL.style.display = (mode === 'login') ? 'block' : 'none';
+  if (formR) formR.style.display = (mode === 'register') ? 'block' : 'none';
+}
+
+function submitLogin(e) {
+    e.preventDefault();
+    setLoading(true, 'กำลังตรวจสอบสิทธิ์...');
+    var email = document.getElementById('loginEmail').value.trim();
+    var pass = document.getElementById('loginPass').value.trim();
+    // ปิด Auto Login ข้ามวัน: ไม่รับค่า Remember Me (บังคับใช้ Session)
+    
+    var btn = document.getElementById('btnLoginSubmit');
+    if (btn) btn.disabled = true;
+
+    callGas('loginWithCredentials', email, pass)
+      .then(function(res) {
+        STATE.token = res.data.token;
+        // บันทึกเฉพาะใน sessionStorage (ปิดหน้าต่าง/ปิดแท็บ = หลุดล็อกอิน)
+        sessionStorage.setItem('MRB_AUTH_TOKEN', STATE.token);
+        localStorage.removeItem('MRB_AUTH_TOKEN'); 
+
+        STATE.user = res.data.user;
+        closeModal('loginModal');
+        document.getElementById('loginForm').reset();
+        
+        updateAuthUI();
+        startNotificationPolling(); // เริ่มรัน polling ทันทีเมื่อ Login สำเร็จ
+
+        Swal.fire({
+          icon: 'success',
+          title: 'เข้าสู่ระบบสำเร็จ!',
+          text: 'ยินดีต้อนรับ ' + STATE.user.name,
+          confirmButtonColor: '#0f4c81',
+          timer: 2000,
+          timerProgressBar: true
+        });
+
+        if (document.getElementById('view-dashboard').classList.contains('active')) {
+          loadDashboard();
+        }
+      })
+      .catch(function(err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'เข้าสู่ระบบไม่สำเร็จ',
+          text: err.message,
+          confirmButtonColor: '#0f4c81'
+        });
+      })
+      .finally(function() {
+        if (btn) btn.disabled = false;
+        setLoading(false);
+      });
+  }
+
+function submitRegister(e) {
+  e.preventDefault();
+  setLoading(true, 'กำลังลงทะเบียนบัญชี...');
+  var payload = {
+    name: document.getElementById('regName').value.trim(),
+    department: document.getElementById('regDept').value,
+    phone: document.getElementById('regPhone').value.trim(),
+    email: document.getElementById('regEmail').value.trim(),
+    passcode: document.getElementById('regPass').value.trim()
+  };
+
+  var btn = document.getElementById('btnRegSubmit');
+  if (btn) btn.disabled = true;
+
+  callGas('registerStaffAccount', payload)
+    .then(function(res) {
+      closeModal('loginModal');
+      document.getElementById('registerForm').reset();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'ลงทะเบียนสำเร็จ!',
+        text: res.message,
+        confirmButtonColor: '#0f4c81',
+        confirmButtonText: 'ตกลง'
+      });
+    })
+    .catch(function(err) {
+      Swal.fire({ icon: 'error', title: 'ลงทะเบียนไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
+    })
+    .finally(function() {
+      if (btn) btn.disabled = false;
+      setLoading(false);
+    });
+}
+
+/* ==========================================================================
+ * Dashboard & Charts
+ * ======================================================================== */
+function loadDashboard() {
+  callGas('getDashboardData', STATE.token)
+    .then(function(res) {
+      var kpis = res.data.kpis;
+      var charts = res.data.charts;
+      var recentPending = res.data.recentPending || [];
+
+      document.getElementById('kpiTotalRooms').textContent = kpis.totalRooms;
+      document.getElementById('kpiAvailToday').textContent = kpis.availableRoomsToday;
+      document.getElementById('kpiBookedToday').textContent = kpis.bookedRoomsToday;
+      document.getElementById('kpiTotalBookings').textContent = kpis.totalBookings;
+      document.getElementById('kpiPending').textContent = kpis.pendingCount;
+      document.getElementById('kpiApproved').textContent = kpis.approvedCount;
+      document.getElementById('kpiCancelled').textContent = kpis.cancelledCount;
+      document.getElementById('kpiMostUsed').textContent = kpis.mostUsedRoom;
+      document.getElementById('kpiMostUsedSub').textContent = (kpis.mostUsedCount > 0) ? ('ใช้งาน ' + kpis.mostUsedCount + ' ครั้ง') : '';
+
+      updatePendingBadgeCount(kpis.pendingCount);
+
+      renderBarChart('chartByRoom', charts.byRoom.labels, charts.byRoom.values, 'จำนวนครั้งที่ใช้งาน', '#0284c7');
+      renderLineChart('chartByMonth', charts.byMonth.labels, charts.byMonth.values);
+      renderDoughnutChart('chartByStatus', charts.byStatus.labels, charts.byStatus.values);
+
+      var pendingCardContainer = document.getElementById('dashPendingCardContainer');
+      var isPrivileged = STATE.user.authenticated && ['Admin', 'Approver'].indexOf(STATE.user.role) !== -1;
+
+      if (pendingCardContainer) {
+        pendingCardContainer.style.display = isPrivileged ? 'block' : 'none';
+      }
+
+      if (isPrivileged) {
+          var tbody = document.getElementById('dashPendingBody');
+          if (tbody) {
+            if (recentPending.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:16px;">ไม่มีรายการรออนุมัติในขณะนี้</td></tr>';
+            } else {
+              var html = '';
+              recentPending.forEach(function(b) {
+                var thaiDate = formatDisplayDateThai(b.Date);
+                html += '<tr>' +
+                  '<td><strong>' + escapeHtml(b.BookingID) + '</strong></td>' +
+                  '<td>' + escapeHtml(thaiDate) + '<br><small style="color:var(--muted);">' + escapeHtml(b.StartTime) + '–' + escapeHtml(b.EndTime) + ' น.</small></td>' +
+                  '<td>' + escapeHtml(b.RoomName) + '</td>' +
+                  '<td>' + escapeHtml(b.Topic) + '</td>' +
+                  '<td>' + escapeHtml(b.BookerName) + '<br><small style="color:var(--muted);">' + escapeHtml(b.Department) + '</small></td>' +
+                  '<td>' + statusBadge(b.Status) + '</td>' +
+                  '<td style="white-space:nowrap;">' +
+                    // ปุ่มกดอนุมัติ / ไม่อนุมัติ / ดูรายละเอียด จากหน้า Dashboard ได้ทันที
+                    '<button class="btn btn-success btn-sm" onclick="approveFromDashboard(\'' + escapeHtml(b.BookingID) + '\')" title="อนุมัติการจองทันที" style="margin-right:4px;"><i class="bi bi-check-lg"></i> อนุมัติ</button>' +
+                    '<button class="btn btn-danger btn-sm" onclick="rejectFromDashboard(\'' + escapeHtml(b.BookingID) + '\')" title="ไม่อนุมัติ" style="margin-right:4px;"><i class="bi bi-x-lg"></i> ไม่อนุมัติ</button>' +
+                    '<button class="btn btn-outline btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')" title="ดูรายละเอียดและผังห้อง"><i class="bi bi-eye"></i></button>' +
+                  '</td>' +
+                  '</tr>';
+              });
+              tbody.innerHTML = html;
+            }
+          }
+        }
+    })
+    .catch(function(err) { showToast(err.message, 'error'); });
+}
+/* ==========================================================================
+   * Quick Approval Actions Directly from Dashboard
+   * ======================================================================== */
+  function approveFromDashboard(bookingId) {
+    setLoading(true, 'กำลังบันทึกอนุมัติการจอง...');
+    callGas('updateBookingStatus', STATE.token, bookingId, 'อนุมัติ', '')
+      .then(function(res) {
+        Swal.fire({
+          icon: 'success',
+          title: 'อนุมัติการจองสำเร็จ!',
+          text: 'สร้างกิจกรรมใน Google Calendar และส่งอีเมลแจ้งผู้จองเรียบร้อยแล้ว',
+          confirmButtonColor: '#0f4c81',
+          timer: 2000,
+          timerProgressBar: true
+        });
+        // รีเฟรชข้อมูล Dashboard และตัวเลข Badge อัตโนมัติทันที
+        loadDashboard();
+        if (typeof refreshBadgesImmediately === 'function') {
+          refreshBadgesImmediately();
+        }
+      })
+      .catch(function(err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'ไม่สามารถอนุมัติได้',
+          text: err.message,
+          confirmButtonColor: '#0f4c81',
+          confirmButtonText: 'ตกลง'
+        });
+      })
+      .finally(function() {
+        setLoading(false);
+      });
+  }
+
+  function rejectFromDashboard(bookingId) {
+    Swal.fire({
+      title: 'ระบุเหตุผลที่ไม่อนุมัติ',
+      input: 'textarea',
+      inputPlaceholder: 'กรอกเหตุผลหรือคำชี้แจงเพิ่มเติมเพื่อให้ผู้จองทราบ (ส่งทางอีเมล)...',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'ยืนยันไม่อนุมัติ',
+      cancelButtonText: 'ยกเลิก',
+      inputAttributes: {
+        'style': 'font-family: Sarabun, sans-serif; font-size: 14px;'
+      }
+    }).then(function(result) {
+      if (result.isConfirmed) {
+        setLoading(true, 'กำลังบันทึกข้อมูล...');
+        callGas('updateBookingStatus', STATE.token, bookingId, 'ไม่อนุมัติ', result.value || '')
+          .then(function(res) {
+            Swal.fire({
+              icon: 'success',
+              title: 'บันทึกสถานะไม่อนุมัติเรียบร้อย',
+              text: 'ระบบได้ส่งอีเมลแจ้งผลไปยังผู้จองแล้ว',
+              confirmButtonColor: '#0f4c81',
+              timer: 2000,
+              timerProgressBar: true
+            });
+            loadDashboard();
+            if (typeof refreshBadgesImmediately === 'function') {
+              refreshBadgesImmediately();
+            }
+          })
+          .catch(function(err) {
+            Swal.fire({
+              icon: 'error',
+              title: 'เกิดข้อผิดพลาด',
+              text: err.message,
+              confirmButtonColor: '#0f4c81',
+              confirmButtonText: 'ตกลง'
+            });
+          })
+          .finally(function() {
+            setLoading(false);
+          });
+      }
+    });
+  }
+function renderBarChart(canvasId, labels, data, label, color) {
+  if (STATE.charts[canvasId]) STATE.charts[canvasId].destroy();
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  STATE.charts[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 6 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+}
+
+function renderLineChart(canvasId, labels, data) {
+  if (STATE.charts[canvasId]) STATE.charts[canvasId].destroy();
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  STATE.charts[canvasId] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{ label: 'จำนวนการจอง', data: data, borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.12)', fill: true, tension: 0.32 }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+  });
+}
+
+function renderDoughnutChart(canvasId, labels, data) {
+  if (STATE.charts[canvasId]) STATE.charts[canvasId].destroy();
+  var ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  STATE.charts[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#16a34a', '#d97706', '#64748b', '#dc2626'] }] },
+    options: { responsive: true }
+  });
+}
+
+/* ==========================================================================
+ * Booking Flow
+ * ======================================================================== */
+function onBookingDateChanged() {
+  var dateInput = document.getElementById('availCheckDate');
+  if (!dateInput || !dateInput.value) return;
+  var dateVal = dateInput.value;
+
+  var bkD = document.getElementById('bkDate');
+  if (bkD) bkD.value = dateVal;
+  var chkBox = document.getElementById('availabilityCheckBox');
+  if (chkBox) chkBox.innerHTML = '';
+
+  var container = document.getElementById('roomAvailCards');
+  if (!container) return;
+  container.innerHTML = '<div style="color:var(--muted); padding:10px 0;">กำลังตรวจสอบห้องว่าง...</div>';
+
+  updateTimeSlotOptions();
+
+  callGas('getRoomAvailabilityForDate', dateVal)
+    .then(function(res) {
+      var rooms = res.data.rooms || [];
+      var currentSelected = document.getElementById('bkRoomId').value;
+
+      var html = '';
+      rooms.forEach(function(r) {
+        var isFree = (r.statusType === 'FREE');
+        var dot = isFree ? '🟢' : '🔴';
+        var statusCls = isFree ? 'avail-free' : 'avail-busy';
+        var selectedCls = (r.RoomID === currentSelected) ? 'selected' : '';
+
+        html += '<div class="avail-item ' + selectedCls + '" data-room-id="' + escapeHtml(r.RoomID) + '" onclick="selectRoomFromAvail(\'' + escapeHtml(r.RoomID) + '\')">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+          '<strong>' + escapeHtml(r.RoomName) + '</strong>' +
+          '<small style="color:var(--muted);">จุ ' + r.Capacity + ' คน</small>' +
+          '</div>' +
+          '<div class="avail-status ' + statusCls + '">' + dot + ' ' + escapeHtml(r.RoomName) + ' — ' + escapeHtml(r.summaryText) + '</div>' +
+          '</div>';
+      });
+      container.innerHTML = html;
+    })
+    .catch(function(err) {
+      container.innerHTML = '<div class="alert alert-danger">' + escapeHtml(err.message) + '</div>';
+    });
+}
+
+function syncDateFromForm() {
+  var d = document.getElementById('bkDate').value;
+  if (d) {
+    document.getElementById('availCheckDate').value = d;
+    updateTimeSlotOptions();
+    onBookingDateChanged();
+  }
+}
+
+function selectRoomFromAvail(roomId) {
+  var select = document.getElementById('bkRoomId');
+  if (select) select.value = roomId;
+  syncSelectedRoomCard();
+  triggerAutoCheckAvailability();
+}
+
+function syncSelectedRoomCard() {
+  var selectedId = document.getElementById('bkRoomId').value;
+  var items = document.querySelectorAll('.avail-item');
+  items.forEach(function(el) {
+    el.classList.toggle('selected', el.getAttribute('data-room-id') === selectedId);
+  });
+}
 
 /* ==========================================================================
  * Booking Form Submission with Summary & Confirmation Dialog
@@ -1206,6 +1835,112 @@ function executeBookingSubmit(payload) {
       if (btn) btn.disabled = false;
       setLoading(false);
     });
+}
+/* ==========================================================================
+ * Real-time Auto-Polling & Immediate Badge Refresh System
+ * ======================================================================== */
+var POLL_INTERVAL_MS = 15000; // ตรวจสอบอัตโนมัติทุก 15 วินาที
+
+function refreshBadgesImmediately() {
+  if (!STATE.user.authenticated || ['Admin', 'Approver'].indexOf(STATE.user.role) === -1) return;
+  fetchNotificationBadgesSilent(false);
+}
+
+function startNotificationPolling() {
+  stopNotificationPolling();
+  if (!STATE.user.authenticated || ['Admin', 'Approver'].indexOf(STATE.user.role) === -1) {
+    return;
+  }
+
+  // ดึงค่าครั้งแรกทันที
+  fetchNotificationBadgesSilent(true);
+
+  // ตั้งเวลาวนลูปตรวจสอบเบื้องหลังทุก 15 วินาที
+  STATE.pollTimer = setInterval(function() {
+    if (!document.hidden) {
+      fetchNotificationBadgesSilent(false);
+    }
+  }, POLL_INTERVAL_MS);
+}
+
+function stopNotificationPolling() {
+  if (STATE.pollTimer) {
+    clearInterval(STATE.pollTimer);
+    STATE.pollTimer = null;
+  }
+  STATE.lastBadgeBookings = null;
+  STATE.lastBadgeUsers = null;
+  document.title = 'ระบบจองห้องประชุมออนไลน์ | เทศบาลเมืองสมุทรสงคราม';
+}
+
+// เมื่อสลับแท็บกลับมาหน้าเว็บ ให้ดึงข้อมูลใหม่ทันที
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && STATE.user.authenticated && ['Admin', 'Approver'].indexOf(STATE.user.role) !== -1) {
+    fetchNotificationBadgesSilent(false);
+  }
+});
+
+function fetchNotificationBadgesSilent(isInitial) {
+  if (!STATE.user.authenticated || ['Admin', 'Approver'].indexOf(STATE.user.role) === -1) return;
+
+  callGas('getNotificationBadges', STATE.token)
+    .then(function(res) {
+      var data = res.data || { pendingBookings: 0, pendingUsers: 0 };
+      var newBookings = Number(data.pendingBookings) || 0;
+      var newUsers = Number(data.pendingUsers) || 0;
+
+      // 1. อัปเดตตัวเลข Badge บน Sidebar
+      updatePendingBadgeCount(newBookings);
+      if (STATE.user.role === 'Admin') {
+        updateAdminPendingBadge(newUsers);
+      }
+
+      // 2. แสดงตัวเลขแจ้งเตือนบน Title แท็บเบราว์เซอร์ เช่น (1) ระบบจองห้อง...
+      var totalAlert = newBookings + (STATE.user.role === 'Admin' ? newUsers : 0);
+      document.title = (totalAlert > 0 ? '(' + totalAlert + ') ' : '') + 'ระบบจองห้องประชุมออนไลน์ | เทศบาลเมืองสมุทรสงคราม';
+
+      // 3. หากมีรายการเพิ่มขึ้นมาจากรอบก่อน ให้แจ้งเตือน Toast และรีโหลดตารางให้อัตโนมัติ
+      if (!isInitial) {
+        if (STATE.lastBadgeBookings !== null && newBookings > STATE.lastBadgeBookings) {
+          var diffB = newBookings - STATE.lastBadgeBookings;
+          showToast('🔔 มีรายการจองห้องประชุมใหม่รออนุมัติ (+' + diffB + ' รายการ)', 'info');
+          refreshActiveViews();
+        }
+        if (STATE.user.role === 'Admin' && STATE.lastBadgeUsers !== null && newUsers > STATE.lastBadgeUsers) {
+          var diffU = newUsers - STATE.lastBadgeUsers;
+          showToast('👤 มีผู้ลงทะเบียนใหม่รออนุมัติ (+' + diffU + ' บัญชี)', 'warning');
+          refreshActiveUsersTab();
+        }
+      }
+
+      STATE.lastBadgeBookings = newBookings;
+      STATE.lastBadgeUsers = newUsers;
+    })
+    .catch(function() {});
+}
+
+function refreshActiveViews() {
+  var approvalView = document.getElementById('view-approval');
+  var dashView = document.getElementById('view-dashboard');
+  var adminView = document.getElementById('view-admin');
+
+  if (approvalView && approvalView.classList.contains('active')) {
+    loadApprovalViewData();
+  }
+  if (dashView && dashView.classList.contains('active')) {
+    loadDashboard();
+  }
+  if (adminView && adminView.classList.contains('active')) {
+    loadAdminBookings();
+  }
+}
+
+function refreshActiveUsersTab() {
+  var usersPanel = document.getElementById('admin-tab-users');
+  var adminView = document.getElementById('view-admin');
+  if (adminView && adminView.classList.contains('active') && usersPanel && usersPanel.classList.contains('active')) {
+    loadAdminUsers();
+  }
 }
 
 /* ==========================================================================
@@ -1554,6 +2289,28 @@ function loadCalendarEvents() {
 /* ==========================================================================
  * Standalone Approval Management (Approver & Admin)
  * ======================================================================== */
+function updatePendingBadgeCount(count) {
+  var badge = document.getElementById('sidebarPendingBadge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function updateAdminPendingBadge(count) {
+  var badge = document.getElementById('sidebarAdminBadge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
 function loadApprovalViewData() {
   callGas('searchBookings', STATE.token, { status: 'รออนุมัติ' })
     .then(function(res) {
@@ -2399,6 +3156,48 @@ function updateAuthUI() {
     document.querySelectorAll('#navApprovalBtn').forEach(function(el) { el.style.display = 'none'; });
     document.querySelectorAll('.auth-required-nav, .auth-required-mobile').forEach(function(el) { el.style.display = 'none'; });
     if (authBtn) authBtn.style.display = 'inline-flex';
+  }
+}
+function checkAdminNotifications() {
+  // 1. เช็กจำนวนการจองรออนุมัติ (Approver & Admin)
+  if (['Admin', 'Approver'].indexOf(STATE.user.role) !== -1) {
+    callGas('searchBookings', STATE.token, { status: 'รออนุมัติ' })
+      .then(function(sRes) {
+        updatePendingBadgeCount((sRes.data || []).length);
+      })
+      .catch(function() {});
+  }
+
+  // 2. เช็กจำนวนสมาชิกใหม่ที่รออนุมัติบัญชี (Admin เท่านั้น)
+  if (STATE.user.role === 'Admin') {
+    callGas('getUsersList', STATE.token)
+      .then(function(uRes) {
+        var pendingUsers = (uRes.data || []).filter(function(x) {
+          return String(x.Status).trim() === 'รออนุมัติ';
+        });
+        updateAdminPendingBadge(pendingUsers.length);
+
+        if (pendingUsers.length > 0) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'มีผู้ลงทะเบียนใหม่รออนุมัติบัญชี!',
+            text: 'พบสมาชิกใหม่ ' + pendingUsers.length + ' บัญชี ที่กำลังรอการตรวจสอบและอนุมัติการใช้งาน',
+            confirmButtonColor: '#0f4c81',
+            confirmButtonText: '<i class="bi bi-people"></i> ไปที่หน้าจัดการผู้ใช้',
+            showCancelButton: true,
+            cancelButtonText: 'ภายหลัง'
+          }).then(function(result) {
+            if (result.isConfirmed) {
+              navigateTo('admin');
+              setTimeout(function() {
+                var usersTabBtn = document.querySelectorAll('#view-admin .tab-btn')[3];
+                if (usersTabBtn) switchAdminTab('users', usersTabBtn);
+              }, 200);
+            }
+          });
+        }
+      })
+      .catch(function() {});
   }
 }
 
