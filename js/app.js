@@ -2729,38 +2729,47 @@ function submitAdminSettings(e) {
   e.preventDefault();
   setLoading(true, 'กำลังบันทึกการตั้งค่าระบบ...');
   
-  var payload = {
-    ORG_NAME: document.getElementById('setOrgName').value.trim(),
-    FRONTEND_URL: document.getElementById('setFrontendUrl') ? document.getElementById('setFrontendUrl').value.trim() : '',
-    OPEN_HOUR: document.getElementById('setOpenHour').value,
-    CLOSE_HOUR: document.getElementById('setCloseHour').value,
-    
-    // 🟢 บันทึกค่าจำนวนรายการ Kiosk สูงสุด
-    KIOSK_MAX_UPCOMING: document.getElementById('setKioskMaxUpcoming') ? document.getElementById('setKioskMaxUpcoming').value.trim() : '5',
+  // ฟังก์ชันช่วยดึงค่าความปลอดภัย ป้องกัน Error Reading Null
+  function getSafeVal(id, defaultVal) {
+    var el = document.getElementById(id);
+    return (el && el.value !== undefined) ? el.value.trim() : (defaultVal || '');
+  }
 
-    // 🟢 บันทึกค่าขั้นสูง
-    SPREADSHEET_ID: document.getElementById('setSpreadsheetId') ? document.getElementById('setSpreadsheetId').value.trim() : '',
-    CALENDAR_ID: document.getElementById('setCalendarId') ? document.getElementById('setCalendarId').value.trim() : '',
-    DRIVE_FOLDER_ID: document.getElementById('setDriveFolderId') ? document.getElementById('setDriveFolderId').value.trim() : '',
-    CHAT_WEBHOOK_URL: document.getElementById('setChatWebhookUrl') ? document.getElementById('setChatWebhookUrl').value.trim() : '',
-    ADMIN_NOTIFY_EMAIL: document.getElementById('setAdminNotifyEmail') ? document.getElementById('setAdminNotifyEmail').value.trim() : '',
+  var payload = {
+    ORG_NAME: getSafeVal('setOrgName', 'เทศบาลเมืองสมุทรสงคราม'),
+    FRONTEND_URL: getSafeVal('setFrontendUrl', ''),
+    OPEN_HOUR: getSafeVal('setOpenHour', '07:00'),
+    CLOSE_HOUR: getSafeVal('setCloseHour', '20:00'),
+    
+    // ตั้งค่า Kiosk Max Upcoming
+    KIOSK_MAX_UPCOMING: getSafeVal('setKioskMaxUpcoming', '5'),
+
+    // ค่าพารามิเตอร์ขั้นสูง (เช็กความปลอดภัยป้องกัน null)
+    SPREADSHEET_ID: getSafeVal('setSpreadsheetId', ''),
+    CALENDAR_ID: getSafeVal('setCalendarId', ''),
+    DRIVE_FOLDER_ID: getSafeVal('setDriveFolderId', ''),
+    CHAT_WEBHOOK_URL: getSafeVal('setChatWebhookUrl', ''),
+    ADMIN_NOTIFY_EMAIL: getSafeVal('setAdminNotifyEmail', ''),
 
     // สถานะเปิด/ปิดระบบ
-    REQUIRE_APPROVAL: document.getElementById('setRequireApproval').value,
-    ENABLE_CALENDAR_SYNC: document.getElementById('setCalendarSync').value,
-    ENABLE_CHAT_NOTIFY: document.getElementById('setChatNotify').value,
-    REMINDER_1D: document.getElementById('setRemind1D').value,
-    REMINDER_2H: document.getElementById('setRemind2H').value,
-    REMINDER_30M: document.getElementById('setRemind30M').value
+    REQUIRE_APPROVAL: getSafeVal('setRequireApproval', 'TRUE'),
+    ENABLE_CALENDAR_SYNC: getSafeVal('setCalendarSync', 'TRUE'),
+    ENABLE_CHAT_NOTIFY: getSafeVal('setChatNotify', 'FALSE'),
+    REMINDER_1D: getSafeVal('setRemind1D', 'TRUE'),
+    REMINDER_2H: getSafeVal('setRemind2H', 'TRUE'),
+    REMINDER_30M: getSafeVal('setRemind30M', 'TRUE')
   };
 
   callGas('saveAdminSettings', STATE.token, payload)
     .then(function() {
       STATE.settings = payload;
-      if (document.getElementById('orgNameLabel')) {
-        document.getElementById('orgNameLabel').textContent = payload.ORG_NAME;
+      var orgLabel = document.getElementById('orgNameLabel');
+      if (orgLabel) {
+        orgLabel.textContent = payload.ORG_NAME;
       }
-      updateTimeSlotOptions();
+      if (typeof updateTimeSlotOptions === 'function') {
+        updateTimeSlotOptions();
+      }
 
       Swal.fire({
         icon: 'success',
