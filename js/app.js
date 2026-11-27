@@ -2615,3 +2615,78 @@ function loadAdminAudit() {
     })
     .catch(function(err) { showToast(err.message, 'error'); });
 }
+// ตัวแปรเก็บข้อมูลดิบสำหรับ Live Search ในหน้าอนุมัติ
+  var windowApprovalCache = [];
+
+  function loadApprovalViewData() {
+    callGas('searchBookings', STATE.token, { status: 'รออนุมัติ' })
+      .then(function(res) {
+        var list = res.data || [];
+        windowApprovalCache = list; // เก็บใส่ Cache ชั่วคราวสำหรับกรอง
+        updatePendingBadgeCount(list.length);
+
+        // เติมตัวเลือกห้องประชุมใน Dropdown ตัวกรอง
+        var roomFilter = document.getElementById('approvalRoomFilter');
+        if (roomFilter && STATE.rooms) {
+          var curVal = roomFilter.value;
+          var rOpts = '<option value="">ทุกห้องประชุม</option>';
+          STATE.rooms.forEach(function(r) {
+            rOpts += '<option value="' + escapeHtml(r.RoomName) + '">' + escapeHtml(r.RoomName) + '</option>';
+          });
+          roomFilter.innerHTML = rOpts;
+          roomFilter.value = curVal;
+        }
+
+        renderApprovalTable(list);
+      })
+      .catch(function(err) { showToast(err.message, 'error'); });
+  }
+
+  function renderApprovalTable(list) {
+    var tbody = document.getElementById('standaloneApprovalBody');
+    if (!tbody) return;
+
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;"><i class="bi bi-check-circle" style="font-size:24px; color:#16a34a;"></i><br>ไม่พบรายการจองที่รอการอนุมัติ</td></tr>';
+      return;
+    }
+
+    var html = '';
+    list.forEach(function(b) {
+      var thaiDate = formatDisplayDateThai(b.Date);
+      html += '<tr>' +
+        '<td><strong>' + escapeHtml(b.BookingID) + '</strong></td>' +
+        '<td>' + escapeHtml(thaiDate) + '<br><small>' + escapeHtml(b.StartTime) + '–' + escapeHtml(b.EndTime) + ' น.</small></td>' +
+        '<td>' + escapeHtml(b.RoomName) + '</td>' +
+        '<td>' + escapeHtml(b.Topic) + '</td>' +
+        '<td>' + escapeHtml(b.BookerName) + '<br><small style="color:var(--muted);">' + escapeHtml(b.Department) + '</small></td>' +
+        '<td>' + b.Participants + ' คน</td>' +
+        '<td style="white-space:nowrap;">' +
+          '<button class="btn btn-success btn-sm" onclick="approveFromView(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-check-lg"></i> อนุมัติ</button> ' +
+          '<button class="btn btn-danger btn-sm" onclick="rejectFromView(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-x-lg"></i> ไม่อนุมัติ</button> ' +
+          '<button class="btn btn-light btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-eye"></i></button>' +
+        '</td></tr>';
+    });
+    tbody.innerHTML = html;
+  }
+
+  // ฟังก์ชันกรองข้อมูลแบบ Live Search ทันทีที่พิมพ์หรือเลือกห้อง
+  function filterApprovalTable() {
+    var query = (document.getElementById('approvalSearchQuery').value || '').toLowerCase().trim();
+    var roomNameFilter = (document.getElementById('approvalRoomFilter').value || '').trim();
+
+    var filtered = windowApprovalCache.filter(function(b) {
+      if (roomNameFilter && String(b.RoomName || '').trim() !== roomNameFilter) {
+        return false;
+      }
+      if (query) {
+        var textMatch = [
+          b.BookingID, b.Topic, b.BookerName, b.Department, b.RoomName, b.UserEmail
+        ].join(' ').toLowerCase();
+        if (textMatch.indexOf(query) === -1) return false;
+      }
+      return true;
+    });
+
+    renderApprovalTable(filtered);
+  }
