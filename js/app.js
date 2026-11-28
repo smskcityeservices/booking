@@ -494,7 +494,8 @@ function navigateTo(view) {
     mybookings: 'รายการจองของฉัน',
     stats: 'สถิติและค้นหารายการจอง',
     admin: 'จัดการระบบและอนุมัติการจอง',
-    kiosk: 'ระบบแสดงสถานะห้องประชุมหน้าห้อง (Kiosk)'
+    kiosk: 'ระบบแสดงสถานะห้องประชุมหน้าห้อง (Kiosk)',
+    manual: 'คู่มือการใช้งานระบบ'
   };
   var pageTitle = document.getElementById('pageTitle');
   if (pageTitle) pageTitle.textContent = titles[view] || 'ระบบจองห้องประชุม';
