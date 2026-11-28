@@ -154,91 +154,38 @@ function callGas(fnName) {
     return res;
   });
 }
-function submitAdminSettings(e) {
-  if (e && typeof e.preventDefault === 'function') {
-    e.preventDefault();
-  }
-  setLoading(true, 'กำลังบันทึกการตั้งค่าระบบและโลโก้...');
-
-  function getSafeVal(id, defaultVal) {
-    var el = document.getElementById(id);
-    if (!el || el.value === undefined || el.value === null) {
-      return defaultVal !== undefined ? defaultVal : '';
-    }
-    var val = String(el.value).trim();
-    return (val !== '') ? val : (defaultVal !== undefined ? defaultVal : '');
-  }
-
-  // 🟢 ป้องกันโลโก้หาย: หากในช่อง input ว่าง ให้ดึงค่าโลโก้เก่าจาก STATE.settings มาใช้สำรอง
-  var currentLogoFallback = (STATE.settings && STATE.settings.ORG_LOGO_URL) ? STATE.settings.ORG_LOGO_URL : '';
-  var submittedLogoUrl = getSafeVal('setLogoUrl', currentLogoFallback);
-
-  var payload = {
-    ORG_NAME: getSafeVal('setOrgName', 'เทศบาลเมืองสมุทรสงคราม'),
-    ORG_LOGO_URL: submittedLogoUrl, // ใช้ค่าสำรอง ป้องกันค่าว่างทับ
-    FRONTEND_URL: getSafeVal('setFrontendUrl', ''),
-    OPEN_HOUR: getSafeVal('setOpenHour', '07:00'),
-    CLOSE_HOUR: getSafeVal('setCloseHour', '20:00'),
-    KIOSK_MAX_UPCOMING: getSafeVal('setKioskMaxUpcoming', '5'),
-  //  SPREADSHEET_ID: getSafeVal('setSpreadsheetId', ''),
-   // CALENDAR_ID: getSafeVal('setCalendarId', ''),
-   // DRIVE_FOLDER_ID: getSafeVal('setDriveFolderId', ''),
-   // CHAT_WEBHOOK_URL: getSafeVal('setChatWebhookUrl', ''),
-   // ADMIN_NOTIFY_EMAIL: getSafeVal('setAdminNotifyEmail', ''),
-    REQUIRE_APPROVAL: getSafeVal('setRequireApproval', 'TRUE'),
-    ENABLE_CALENDAR_SYNC: getSafeVal('setCalendarSync', 'TRUE'),
-    ENABLE_CHAT_NOTIFY: getSafeVal('setChatNotify', 'FALSE'),
-    REMINDER_1D: getSafeVal('setRemind1D', 'TRUE'),
-    REMINDER_2H: getSafeVal('setRemind2H', 'TRUE'),
-    REMINDER_30M: getSafeVal('setRemind30M', 'TRUE')
-  };
-
-  // แนบข้อมูลรูปภาพโลโก้กรณีอัปโหลดไฟล์ใหม่ (Base64)
-  if (typeof pendingLogoData !== 'undefined' && pendingLogoData) {
-    payload.logoBase64 = pendingLogoData.base64;
-    payload.logoFileName = pendingLogoData.fileName;
-    payload.logoMimeType = pendingLogoData.mimeType;
-  }
-
-  callGas('saveAdminSettings', STATE.token, payload)
+function loadAdminSettings() {
+  callGas('getAdminSettings', STATE.token)
     .then(function(res) {
-      var savedSettings = (res && res.data) ? res.data : payload;
-      STATE.settings = savedSettings;
+      var s = res.data || {};
 
-      var newLogoUrl = savedSettings.ORG_LOGO_URL || payload.ORG_LOGO_URL;
-      STATE.settings.ORG_LOGO_URL = newLogoUrl;
+      function setSafeVal(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.value = (val !== undefined && val !== null) ? val : '';
+      }
 
+      setSafeVal('setOrgName', s.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม');
+      setSafeVal('setFrontendUrl', s.FRONTEND_URL || '');
+      setSafeVal('setOpenHour', extractCleanTime(s.OPEN_HOUR, '07:00'));
+      setSafeVal('setCloseHour', extractCleanTime(s.CLOSE_HOUR, '20:00'));
+      
+      // 🟢 ดึงค่า ORG_LOGO_URL มาแสดงในช่อง Input และพรีวิวรูปภาพ
+      setSafeVal('setLogoUrl', s.ORG_LOGO_URL || '');
       if (typeof updateSystemLogos === 'function') {
-        updateSystemLogos(newLogoUrl);
-      }
-      if (typeof pendingLogoData !== 'undefined') {
-        pendingLogoData = null;
+        updateSystemLogos(s.ORG_LOGO_URL || '');
       }
 
-      var orgLabel = document.getElementById('orgNameLabel');
-      if (orgLabel) {
-        orgLabel.textContent = payload.ORG_NAME;
-      }
+      setSafeVal('setKioskMaxUpcoming', s.KIOSK_MAX_UPCOMING || '5');
 
-      Swal.fire({
-        icon: 'success',
-        title: 'บันทึกสำเร็จ!',
-        text: 'การตั้งค่าระบบและโลโก้เทศบาลถูกบันทึกเรียบร้อยแล้ว',
-        confirmButtonColor: '#0f4c81',
-        timer: 2000,
-        timerProgressBar: true
-      });
+      setSelectValue('setRequireApproval', s.REQUIRE_APPROVAL, 'TRUE');
+      setSelectValue('setCalendarSync', s.ENABLE_CALENDAR_SYNC, 'TRUE');
+      setSelectValue('setChatNotify', s.ENABLE_CHAT_NOTIFY, 'FALSE');
+      setSelectValue('setRemind1D', s.REMINDER_1D, 'TRUE');
+      setSelectValue('setRemind2H', s.REMINDER_2H, 'TRUE');
+      setSelectValue('setRemind30M', s.REMINDER_30M, 'TRUE');
     })
     .catch(function(err) {
-      Swal.fire({
-        icon: 'error',
-        title: 'บันทึกไม่สำเร็จ',
-        text: err.message,
-        confirmButtonColor: '#0f4c81'
-      });
-    })
-    .finally(function() {
-      setLoading(false);
+      showToast(err.message, 'error');
     });
 }
 /* ==========================================================================
