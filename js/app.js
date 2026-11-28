@@ -128,7 +128,7 @@ function callGas(fnName) {
     reqToken = args[0] || STATE.token;
     reqPayload = { limit: args[1] || 100 };
   } else {
-    // getInitialAppData, logoutSession, getDashboardData, getUsersList, getAdminSettings, getNotificationBadges
+    // getInitialAppData, logoutSession, getDashboardData, getUsersList, getAdminSettings, getNotificationBadges, getKioskRoomStatus
     reqToken = args[0] || STATE.token;
     reqPayload = {};
   }
@@ -156,54 +156,49 @@ function callGas(fnName) {
 }
 
 /* ==========================================================================
- * SweetAlert2 & Utility Helpers
+ * SweetAlert2, Flatpickr (พ.ศ.) & Utility Helpers
  * ======================================================================== */
-/**
- * เปิดใช้งานปฏิทิน Flatpickr สไตล์ Modern รองรับภาษาไทยและปี พ.ศ.
- */
-function initModernThaiCalendar(elementId, onSelectCallback) {
+function formatFlatpickrThaiYear_(instance) {
+  if (!instance || !instance.altInput) return;
+  var val = instance.altInput.value;
+  var parts = val.split(' ');
+  if (parts.length === 3) {
+    var y = parseInt(parts[2], 10);
+    if (y && y < 2400) {
+      parts[2] = y + 543;
+      instance.altInput.value = parts.join(' ');
+    }
+  }
+}
+
+function initModernThaiCalendar(elementId, onSelectCallback, allowPast) {
   var el = document.getElementById(elementId);
   if (!el || typeof flatpickr === 'undefined') return;
 
-  flatpickr(el, {
-    locale: 'th', // ใช้ภาษาไทย
-    dateFormat: 'Y-m-d', // ค่าเบื้องหลังเก็บเป็น ค.ศ. (YYYY-MM-DD) เพื่อส่งให้ระบบ Database
-    altInput: true, // เปิดใช้ช่องแสดงผลจำลอง
-    altFormat: 'j M Y', // รูปแบบการแสดงผล เช่น 27 พ.ย. 2569 (แปลง ค.ศ. เป็น พ.ศ. ด้านล่าง)
-    minDate: 'today',
-    disableMobile: "true", // บังคับใช้ปฏิทินสวยงามของเว็บแทนปฏิทินมือถือเดิม
+  var config = {
+    locale: 'th',
+    dateFormat: 'Y-m-d',
+    altInput: true,
+    altFormat: 'j M Y',
+    disableMobile: "true",
     onChange: function(selectedDates, dateStr, instance) {
-      // แปลงปี ค.ศ. บนช่องแสดงผลเป็นปี พ.ศ. อัตโนมัติทันที
-      if (instance.altInput) {
-        var val = instance.altInput.value;
-        var parts = val.split(' ');
-        if (parts.length === 3) {
-          var y = parseInt(parts[2], 10);
-          if (y && y < 2400) {
-            parts[2] = y + 543;
-            instance.altInput.value = parts.join(' ');
-          }
-        }
-      }
+      formatFlatpickrThaiYear_(instance);
       if (typeof onSelectCallback === 'function') {
         onSelectCallback(dateStr);
       }
     },
     onReady: function(selectedDates, dateStr, instance) {
-      if (instance.altInput) {
-        var val = instance.altInput.value;
-        var parts = val.split(' ');
-        if (parts.length === 3) {
-          var y = parseInt(parts[2], 10);
-          if (y && y < 2400) {
-            parts[2] = y + 543;
-            instance.altInput.value = parts.join(' ');
-          }
-        }
-      }
+      formatFlatpickrThaiYear_(instance);
     }
-  });
+  };
+
+  if (!allowPast) {
+    config.minDate = 'today';
+  }
+
+  flatpickr(el, config);
 }
+
 function showToast(msg, type) {
   type = type || 'info';
   var iconMap = { 'success': 'success', 'error': 'error', 'warning': 'warning', 'info': 'info' };
@@ -238,38 +233,7 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
-function initThaiDatePicker(elementId, onSelectCallback) {
-    if (typeof jQuery === 'undefined' || !jQuery().datepicker) return;
 
-    jQuery('#' + elementId).datepicker({
-      dateFormat: 'yy-mm-dd', // ค่าเบื้องหลังเก็บเป็น ค.ศ. (YYYY-MM-DD) เพื่อส่งให้ระบบ Database
-      altField: '#' + elementId + '_display', // ช่องจำลองแสดงผล พ.ศ.
-      altFormat: 'dd M yy',
-      dayNamesMin: ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'],
-      monthNames: ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'],
-      monthNamesShort: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'],
-      onSelect: function(dateText) {
-        if (typeof onSelectCallback === 'function') {
-          onSelectCallback(dateText);
-        }
-      },
-      beforeShowDay: function(date) {
-        return [true, ''];
-      }
-    });
-
-    // แปลงปี ค.ศ. เป็น พ.ศ. บนปฏิทิน
-    jQuery('#' + elementId).datepicker('option', 'yearSuffix', ' ');
-    jQuery('#' + elementId).datepicker('option', 'beforeShow', function(input, inst) {
-      setTimeout(function() {
-        // ปรับแต่งปี พ.ศ. บนหัวปฏิทิน
-        var yearText = inst.dpDiv.find('.ui-datepicker-year').text();
-        if (yearText && parseInt(yearText, 10) < 2400) {
-          inst.dpDiv.find('.ui-datepicker-year').text(parseInt(yearText, 10) + 543);
-        }
-      }, 10);
-    });
-  }
 function openModal(id) {
   var el = document.getElementById(id);
   if (el) el.classList.add('show');
@@ -357,12 +321,6 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
-/**
- * เริ่มต้นระบบและโหลดข้อมูลตั้งต้นทั้งหมดเข้าสู่แอปพลิเคชัน
- */
-/**
- * เริ่มต้นระบบและโหลดข้อมูลตั้งต้นทั้งหมดเข้าสู่แอปพลิเคชัน
- */
 function bootstrapApp() {
   setLoading(true, 'กำลังเชื่อมต่อข้อมูลระบบ...');
 
@@ -376,61 +334,45 @@ function bootstrapApp() {
       STATE.layouts = (data.layouts && data.layouts.length > 0) ? data.layouts : DEFAULT_LAYOUTS;
       STATE.webAppUrl = data.webAppUrl || '';
 
-      // อัปเดตชื่อหน่วยงานบนหัวแถบเมนู
       var orgLabel = document.getElementById('orgNameLabel');
       if (orgLabel) {
         orgLabel.textContent = STATE.settings.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม';
       }
 
-      // 1. เติมตัวเลือกใน Dropdowns ทั้งหมด
       populateDropdowns();
-
-      // 2. เรนเดอร์การ์ดรูปแบบการจัดโต๊ะเก้าอี้ห้องประชุม
       renderBookingLayoutCards();
-
-      // 3. อัปเดตสถานะผู้ใช้งาน (แสดง/ซ่อน เมนูตามสิทธิ์)
       updateAuthUI();
 
-      // 4. ตั้งค่าวันที่เริ่มต้นสำหรับช่องเลือกวัน (วันนี้เป็นต้นไป)
       var today = todayIso();
       ['availCheckDate', 'bkDate', 'searchDate'].forEach(function(id) {
         var input = document.getElementById(id);
         if (input && !input.value) {
-          input.value = (id === 'searchDate' ? '' : today); // ช่องค้นหาปล่อยว่างเพื่อให้ค้นหาทั้งหมดได้
+          input.value = (id === 'searchDate' ? '' : today);
           if (id !== 'searchDate') input.min = today;
         }
       });
 
-      // 5. เปิดใช้งานปฏิทิน Flatpickr สไตล์ Modern (ภาษาไทยและปี พ.ศ.)
       if (typeof initModernThaiCalendar === 'function') {
-        // ปฏิทินเช็คห้องว่างหน้าจอง (ด้านบน)
         initModernThaiCalendar('availCheckDate', function(selectedDate) {
           handleDateSelectionChange(selectedDate, 'availCheckDate');
-        });
+        }, false);
 
-        // ปฏิทินวันที่ในฟอร์มจอง (ด้านล่าง)
         initModernThaiCalendar('bkDate', function(selectedDate) {
-          syncDateFromForm();
-        });
+          handleDateSelectionChange(selectedDate, 'bkDate');
+        }, false);
 
-        // ปฏิทินค้นหาในหน้าสถิติและค้นหา (view-stats)
-        initModernThaiCalendar('searchDate', function(selectedDate) {
+        initModernThaiCalendar('searchDate', function() {
           runBookingSearch();
-        });
+        }, true);
       }
 
-      // 6. สร้างตัวเลือกเวลาเริ่มต้น-สิ้นสุด (กรองเวลาในอดีตทิ้งอัตโนมัติหากเป็นวันนี้)
       updateTimeSlotOptions();
-
-      // 7. เริ่มต้นระบบ Polling ตรวจสอบตัวเลข Badge แจ้งเตือน Real-time เบื้องหลัง
       startNotificationPolling();
 
-      // 8. เริ่มต้นปุ่มเข้าสู่ระบบด้วย Google Account (GIS)
       if (typeof initGoogleIdentityServices === 'function') {
         setTimeout(initGoogleIdentityServices, 300);
       }
 
-      // 9. นำทางไปยังหน้าเป้าหมายเริ่มต้น (หรือเปิดรายละเอียดจาก QR Code)
       var targetView = (window.APP_BOOT && window.APP_BOOT.initialPage && document.getElementById('view-' + window.APP_BOOT.initialPage))
         ? window.APP_BOOT.initialPage : 'dashboard';
       navigateTo(targetView);
@@ -448,118 +390,7 @@ function bootstrapApp() {
       setLoading(false);
     });
 }
-/**
- * ฟังก์ชันกลางสำหรับจัดการเมื่อมีการเปลี่ยนวันที่จากช่องใดช่องหนึ่ง
- */
-function handleDateSelectionChange(selectedDate, sourceId) {
-  if (!selectedDate) return;
 
-  // 1. ซิงค์ค่าวันที่ระหว่างช่องด้านบน (availCheckDate) และด้านล่าง (bkDate) ให้ตรงกันเสมอ
-  var availInput = document.getElementById('availCheckDate');
-  var bkInput = document.getElementById('bkDate');
-
-  if (availInput && availInput.value !== selectedDate) {
-    availInput.value = selectedDate;
-    if (availInput._flatpickr) availInput._flatpickr.setDate(selectedDate, false);
-  }
-  if (bkInput && bkInput.value !== selectedDate) {
-    bkInput.value = selectedDate;
-    if (bkInput._flatpickr) bkInput._flatpickr.setDate(selectedDate, false);
-  }
-
-  // 2. ล้างกล่องแจ้งเตือนสถานะการจองเดิมทิ้ง
-  var chkBox = document.getElementById('availabilityCheckBox');
-  if (chkBox) chkBox.innerHTML = '';
-
-  // 3. บังคับปลดล็อกปุ่ม Preset ทั้งหมดทันที (เปิดปุ่มเต็มวัน/เช้า/บ่ายให้กดได้)
-  var presets = document.querySelectorAll('.time-preset-btn');
-  presets.forEach(function(btn) {
-    btn.disabled = false;
-    btn.style.opacity = '1';
-    btn.style.cursor = 'pointer';
-    btn.style.pointerEvents = 'auto';
-  });
-
-  // 4. อัปเดตตัวเลือกสล็อตเวลา (Time Slots)
-  updateTimeSlotOptions();
-
-  // 5. [หัวใจสำคัญ] สั่งดึงสถานะห้องว่างรายวันใหม่จากฐานข้อมูลเพื่ออัปเดตการ์ดด้านบนและสถานะห้อง
-  fetchAndRenderRoomAvailability(selectedDate);
-}
-
-// ฟังก์ชันเดิมรองรับการเรียกใช้แบบเดิม
-function syncDateFromForm() {
-  var bkInput = document.getElementById('bkDate');
-  if (bkInput && bkInput.value) {
-    handleDateSelectionChange(bkInput.value, 'bkDate');
-  }
-}
-
-function onBookingDateChanged() {
-  var availInput = document.getElementById('availCheckDate');
-  if (availInput && availInput.value) {
-    handleDateSelectionChange(availInput.value, 'availCheckDate');
-  }
-}
-
-/**
- * ฟังก์ชันดึงข้อมูลห้องว่างรายวันและเรนเดอร์การ์ดแสดงผลด้านบน
- */
-function fetchAndRenderRoomAvailability(dateVal) {
-  var container = document.getElementById('roomAvailCards');
-  if (!container) return;
-  
-  container.innerHTML = '<div style="color:var(--muted); padding:10px 0;"><i class="bi bi-arrow-repeat spin"></i> กำลังตรวจสอบสถานะห้องประชุมประจำวัน...</div>';
-
-  callGas('getRoomAvailabilityForDate', dateVal)
-    .then(function(res) {
-      var rooms = res.data.rooms || [];
-      var currentSelected = document.getElementById('bkRoomId').value;
-
-      var html = '';
-      rooms.forEach(function(r) {
-        var isFree = (r.statusType === 'FREE');
-        var dot = isFree ? '🟢' : '🔴';
-        var statusCls = isFree ? 'avail-free' : 'avail-busy';
-        var selectedCls = (r.RoomID === currentSelected) ? 'selected' : '';
-
-        var statusHtml = '';
-        if (isFree) {
-          statusHtml = '— ว่างทั้งวัน';
-        } else if (r.statusType === 'FULL') {
-          statusHtml = '— <span style="color:#dc2626; font-weight:600;">ไม่ว่างทั้งวัน</span>';
-          if (r.bookedSlots && r.bookedSlots.length > 0) {
-            statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
-            r.bookedSlots.forEach(function(s) {
-              statusHtml += '<div>• ช่วงเวลา ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
-            });
-            statusHtml += '</div>';
-          }
-        } else {
-          statusHtml = '— <span style="color:#d97706; font-weight:600;">มีช่วงเวลาที่ไม่ว่าง:</span>';
-          if (r.bookedSlots && r.bookedSlots.length > 0) {
-            statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
-            r.bookedSlots.forEach(function(s) {
-              statusHtml += '<div>🔴 ถูกจอง ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
-            });
-            statusHtml += '</div>';
-          }
-        }
-
-        html += '<div class="avail-item ' + selectedCls + '" data-room-id="' + escapeHtml(r.RoomID) + '" onclick="selectRoomFromAvail(\'' + escapeHtml(r.RoomID) + '\')">' +
-          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
-          '<strong>' + escapeHtml(r.RoomName) + '</strong>' +
-          '<small style="color:var(--muted);">ความจุ ' + r.Capacity + ' คน</small>' +
-          '</div>' +
-          '<div class="avail-status ' + statusCls + '" style="margin-top:6px;">' + dot + ' ' + statusHtml + '</div>' +
-          '</div>';
-      });
-      container.innerHTML = html;
-    })
-    .catch(function(err) {
-      container.innerHTML = '<div class="alert alert-danger">ไม่สามารถโหลดสถานะห้องว่างได้: ' + escapeHtml(err.message) + '</div>';
-    });
-}
 function populateDropdowns() {
   var deptHtml = '<option value="">-- เลือกหน่วยงาน (กอง/สำนัก) --</option>';
   STATE.departments.forEach(function(d) {
@@ -587,9 +418,7 @@ function populateDropdowns() {
     if (el) el.innerHTML = filterOpts;
   });
 }
-/* ==========================================================================
- * Navigation (ปรับปรุงล่าสุด รองรับ Kiosk Mode)
- * ======================================================================== */
+
 function navigateTo(view) {
   var restrictedViews = ['calendar', 'mybookings', 'stats', 'booking'];
   if (restrictedViews.indexOf(view) !== -1 && !STATE.user.authenticated) {
@@ -616,46 +445,39 @@ function navigateTo(view) {
   }
 
   var isKiosk = (view === 'kiosk');
-  
-  // 🟢 ค้นหา Layout หลักของเว็บเพื่อซ่อนเมื่ออยู่โหมด Kiosk
   var sidebar = document.getElementById('sidebar');
   var sidebarOverlay = document.getElementById('sidebarOverlay');
   var mainHeaderBar = document.querySelector('.app-header') || document.querySelector('header');
-  var mainLayoutContent = document.querySelector('.app-main') || document.querySelector('.main-content');
+  var mainLayoutContent = document.querySelector('.main-content') || document.querySelector('.app-main');
 
   if (isKiosk) {
     stopNotificationPolling();
     startKioskMode();
-    
-    // ซ่อนเลย์เอาต์หลักทั้งหมด
     if (sidebar) sidebar.style.display = 'none';
     if (sidebarOverlay) sidebarOverlay.style.display = 'none';
     if (mainHeaderBar) mainHeaderBar.style.display = 'none';
     if (mainLayoutContent) mainLayoutContent.style.marginLeft = '0';
   } else {
     stopKioskMode();
-    
-    // คืนค่าเลย์เอาต์หลักกลับมา
     if (sidebar) sidebar.style.display = '';
     if (sidebarOverlay) sidebarOverlay.style.display = '';
     if (mainHeaderBar) mainHeaderBar.style.display = '';
     if (mainLayoutContent) mainLayoutContent.style.marginLeft = '';
-
     if (STATE.user && STATE.user.authenticated) {
       startNotificationPolling();
     }
   }
 
   var views = document.querySelectorAll('.app-view');
-  views.forEach(function(v) { 
-    v.classList.remove('active'); 
-    if(v.id === 'view-kiosk') v.style.display = 'none'; // ซ่อน view อื่นๆ รวมทั้ง kiosk ถ้าไม่ได้เรียก
+  views.forEach(function(v) {
+    v.classList.remove('active');
+    if (v.id === 'view-kiosk') v.style.display = 'none';
   });
 
   var target = document.getElementById('view-' + view);
   if (target) {
     target.classList.add('active');
-    if (isKiosk) target.style.display = 'block'; // แสดงผล Kiosk แบบเต็มจอ
+    if (isKiosk) target.style.display = 'block';
   }
 
   var btns = document.querySelectorAll('.nav-item, .mobile-bottom-btn');
@@ -689,165 +511,11 @@ function navigateTo(view) {
   else if (view === 'admin') loadAdminView();
   else if (view === 'kiosk') loadKioskData();
 }
-/* ==========================================================================
- * Kiosk Mode Management (Full Screen & Auto Refresh)
- * ======================================================================== */
-var kioskTimer = null;
-var kioskClockTimer = null;
 
-function startKioskMode() {
-  // 1. สั่งเปิดใช้งานโหมด Full Screen ของเบราว์เซอร์อัตโนมัติ
-  enterFullscreen();
-
-  // 2. โหลดข้อมูลรอบแรก
-  loadKioskData();
-  
-  // 3. ตั้งเวลาอัปเดตข้อมูลห้องประชุมทุกๆ 30 วินาที
-  if (!kioskTimer) {
-    kioskTimer = setInterval(loadKioskData, 30000);
-  }
-  
-  // 4. ตั้งเวลานาฬิกาดิจิทัลทุกๆ 1 วินาที
-  if (!kioskClockTimer) {
-    kioskClockTimer = setInterval(updateKioskClock, 1000);
-  }
-}
-
-function stopKioskMode() {
-  // เคลียร์ Timer ต่างๆ
-  if (kioskTimer) {
-    clearInterval(kioskTimer);
-    kioskTimer = null;
-  }
-  if (kioskClockTimer) {
-    clearInterval(kioskClockTimer);
-    kioskClockTimer = null;
-  }
-
-  // ออกจากโหมด Full Screen ของเบราว์เซอร์
-  exitFullscreen();
-}
-
-/**
- * ฟังก์ชันสั่งให้หน้าจอเบราว์เซอร์ขยายเป็นแบบ Fullscreen แท้
- */
-function enterFullscreen() {
-  var elem = document.documentElement;
-  if (elem.requestFullscreen) {
-    elem.requestFullscreen().catch(function(err) {
-      console.log("Browser prevented automatic fullscreen:", err);
-    });
-  } else if (elem.webkitRequestFullscreen) { /* Safari */
-    elem.webkitRequestFullscreen();
-  } else if (elem.msRequestFullscreen) { /* IE11 */
-    elem.msRequestFullscreen();
-  }
-}
-
-/**
- * ฟังก์ชันสั่งออกจาก Fullscreen
- */
-function exitFullscreen() {
-  if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
-    if (document.exitFullscreen) {
-      document.exitFullscreen().catch(function(err) {
-        console.log("Exit fullscreen error:", err);
-      });
-    } else if (document.webkitExitFullscreen) { /* Safari */
-      document.webkitExitFullscreen();
-    } else if (document.msExitFullscreen) { /* IE11 */
-      document.msExitFullscreen();
-    }
-  }
-}
-
-function updateKioskClock() {
-  var now = new Date();
-  var clockEl = document.getElementById('kioskClock');
-  var dateEl = document.getElementById('kioskDate');
-  if (clockEl) clockEl.textContent = now.toTimeString().split(' ')[0];
-  if (dateEl) dateEl.textContent = formatDisplayDateThai(todayIso());
-}
-
-function loadKioskData() {
-  callGas('getKioskRoomStatus')
-    .then(function(res) {
-      var data = res.data;
-      var grid = document.getElementById('kioskRoomGrid');
-      if (!grid) return;
-
-      var html = '';
-      data.rooms.forEach(function(r) {
-        var isBusy = (r.status === 'BUSY');
-        var isMaint = (r.status === 'MAINTENANCE');
-        
-        var cardBg = isBusy ? '#7f1d1d' : (isMaint ? '#475569' : '#065f46');
-        var statusText = isBusy ? 'กำลังใช้งาน (BUSY)' : (isMaint ? 'ปิดปรับปรุง' : 'ห้องว่าง (AVAILABLE)');
-        var statusDot = isBusy ? '🔴' : (isMaint ? '🟡' : '🟢');
-
-        html += '<div style="background: #1e293b; border: 2px solid ' + (isBusy ? '#ef4444' : (isMaint ? '#94a3b8' : '#10b981')) + '; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); display: flex; flex-direction: column;">' +
-          // รูปภาพและป้ายสถานะด้านบน
-          '<div style="position: relative; height: 150px; background: #334155; flex-shrink: 0;">' +
-            '<img src="' + escapeHtml(r.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800') + '" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.75;">' +
-            '<div style="position: absolute; top: 12px; right: 12px; background: ' + cardBg + '; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">' +
-              statusDot + ' ' + statusText +
-            '</div>' +
-            '<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(15,23,42,0.95), transparent); padding: 15px 15px 8px 15px;">' +
-              '<h3 style="margin: 0; font-size: 19px; color: #fff; font-weight: 700;">' + escapeHtml(r.roomName) + '</h3>' +
-              '<div style="font-size: 12px; color: #94a3b8;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.building) + ' ' + escapeHtml(r.floor) + ' &bull; ความจุ ' + r.capacity + ' คน</div>' +
-            '</div>' +
-          '</div>' +
-          
-          // รายละเอียดการประชุมปัจจุบัน
-          '<div style="padding: 16px; flex-grow: 1; display: flex; flex-direction: column;">';
-
-        if (isBusy && r.currentMeeting) {
-          var m = r.currentMeeting;
-          html += '<div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; flex-shrink: 0;">' +
-            '<div style="font-size: 11px; color: #f87171; font-weight: 700; text-transform: uppercase;">กำลังประชุมขณะนี้</div>' +
-            '<div style="font-size: 15px; font-weight: 700; color: #fff; margin: 2px 0;">' + escapeHtml(m.Topic) + '</div>' +
-            '<div style="font-size: 12.5px; color: #cbd5e1;"><i class="bi bi-clock"></i> ' + escapeHtml(m.StartTime) + ' - ' + escapeHtml(m.EndTime) + ' น.</div>' +
-            '<div style="font-size: 12px; color: #94a3b8; margin-top: 4px;"><i class="bi bi-person"></i> ผู้จอง: ' + escapeHtml(m.BookerName) + ' (' + escapeHtml(m.Department) + ')</div>' +
-          '</div>';
-        } else {
-          html += '<div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; color: #34d399; font-weight: 600; flex-shrink: 0;">' +
-            '<i class="bi bi-check-circle"></i> ห้องว่างพร้อมใช้งานในขณะนี้' +
-          '</div>';
-        }
-
-        // แสดงรายการจองถัดไป (สูงสุด 5 รายการ)
-        html += '<div style="font-size: 12.5px; color: #94a3b8; border-top: 1px dashed #334155; padding-top: 10px; margin-top: auto;">' +
-          '<div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;"><i class="bi bi-calendar-event"></i> รายการจองถัดไปวันนี้ (สูงสุด 5 รายการ):</div>';
-
-        if (r.nextMeetings && r.nextMeetings.length > 0) {
-          html += '<div style="display: flex; flex-direction: column; gap: 6px;">';
-          r.nextMeetings.forEach(function(nm, idx) {
-            html += '<div style="background: rgba(30, 41, 59, 0.7); padding: 6px 10px; border-radius: 6px; border: 1px solid #334155;">' +
-              '<div style="display: flex; justify-content: space-between; color: #e2e8f0; font-weight: 600;">' +
-                '<span>' + (idx + 1) + '. ' + escapeHtml(nm.Topic) + '</span>' +
-                '<span style="color: #38bdf8; font-size: 12px;">' + escapeHtml(nm.StartTime) + '-' + escapeHtml(nm.EndTime) + '</span>' +
-              '</div>' +
-              '<div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">ผู้จอง: ' + escapeHtml(nm.BookerName) + ' (' + escapeHtml(nm.Department) + ')</div>' +
-            '</div>';
-          });
-          html += '</div>';
-        } else {
-          html += '<div style="color: #64748b; font-style: italic;">ไม่มีรายการจองอื่นๆ เพิ่มเติมในช่วงเวลาที่เหลือของวันนี้</div>';
-        }
-
-        html += '</div></div></div>';
-      });
-
-      grid.innerHTML = html;
-    })
-    .catch(function(err) {
-      console.error('Kiosk Load Error:', err);
-    });
-}
 /* ==========================================================================
  * Real-time Background Polling & Booker Status Notifications
  * ======================================================================== */
-var POLL_INTERVAL_MS = 15000; // เช็กอัปเดตเบื้องหลังทุก 15 วินาที
+var POLL_INTERVAL_MS = 15000;
 
 function refreshBadgesImmediately() {
   if (!STATE.user.authenticated) return;
@@ -902,7 +570,6 @@ function fetchNotificationBadgesSilent(isInitial) {
         var totalAlert = newBookings + (STATE.user.role === 'Admin' ? newUsers : 0);
         document.title = (totalAlert > 0 ? '(' + totalAlert + ') ' : '') + 'ระบบจองห้องประชุมออนไลน์ | เทศบาลเมืองสมุทรสงคราม';
 
-        // 🔔 ตรวจจับการยกเลิกการจองเพื่อเด้ง Popup แจ้งเตือน Admin / Approver ทันที
         if (data.latestCancelled) {
           var cancelObj = data.latestCancelled;
           var cancelKey = cancelObj.bookingId + '_' + cancelObj.cancelDate;
@@ -932,7 +599,8 @@ function fetchNotificationBadgesSilent(isInitial) {
             });
 
             refreshActiveViews();
-            if (typeof loadCalendarEvents === 'function' && document.getElementById('view-calendar').classList.contains('active')) {
+            var calView = document.getElementById('view-calendar');
+            if (typeof loadCalendarEvents === 'function' && calView && calView.classList.contains('active')) {
               loadCalendarEvents();
             }
           }
@@ -975,15 +643,15 @@ function fetchNotificationBadgesSilent(isInitial) {
       .catch(function() {});
   }
 
-  // 2. สำหรับบุคลากรทุกคน: อัปเดต Badge รายการจองของฉัน และตรวจจับผลอนุมัติ
+  // 2. สำหรับบุคลากรทุกคน: อัปเดต Badge รายการจองของฉัน (นับเฉพาะ "รออนุมัติ") และตรวจจับผลอนุมัติ
   callGas('searchBookings', STATE.token, { myOnly: true, userEmail: STATE.user.email })
     .then(function(res) {
       var list = res.data || [];
-      var activeCount = list.filter(function(x) {
+      var pendingCount = list.filter(function(x) {
         var st = x.EffectiveStatus || x.Status;
-        return st === 'รออนุมัติ' || st === 'อนุมัติ';
+        return st === 'รออนุมัติ';
       }).length;
-      updateMyBookingsBadge(activeCount);
+      updateMyBookingsBadge(pendingCount);
       checkBookerStatusUpdates(list);
     })
     .catch(function() {});
@@ -1022,17 +690,13 @@ function refreshActiveViews() {
   if (approvalView && approvalView.classList.contains('active')) loadApprovalViewData();
   if (dashView && dashView.classList.contains('active')) loadDashboard();
   if (adminView && adminView.classList.contains('active')) loadAdminBookings();
-  
-  // อัปเดตตารางปฏิทินทันทีหากเปิดหน้านั้นอยู่ หรือดึงข้อมูลใหม่
-  if (calView && calView.classList.contains('active')) {
-    loadCalendarEvents();
-  }
+  if (calView && calView.classList.contains('active')) loadCalendarEvents();
 }
 
 function refreshActiveUsersTab() {
   var usersPanel = document.getElementById('admin-tab-users');
   var adminView = document.getElementById('view-admin');
-  if (adminView && adminView.classList.contains('active') && usersPanel && usersPanel.classList.contains('active')) {
+  if (adminView && adminView.classList.contains('active') && usersPanel && (usersPanel.classList.contains('active') || usersPanel.style.display === 'block')) {
     loadAdminUsers();
   }
 }
@@ -1049,11 +713,16 @@ function checkBookerStatusUpdates(bookingsList) {
   var hasNewRejection = false;
   var approvedBooking = null;
   var rejectedBooking = null;
+  var statusChanged = false;
 
   bookingsList.forEach(function(b) {
     var id = b.BookingID;
     var currentStatus = b.EffectiveStatus || b.Status;
     var prevStatus = knownStatuses[id];
+
+    if (prevStatus && prevStatus !== currentStatus) {
+      statusChanged = true;
+    }
 
     if (prevStatus === 'รออนุมัติ') {
       if (currentStatus === 'อนุมัติ' && !hasNewApproval) {
@@ -1069,6 +738,18 @@ function checkBookerStatusUpdates(bookingsList) {
 
   localStorage.setItem(storageKey, JSON.stringify(knownStatuses));
 
+  if (statusChanged) {
+    var myBookingsView = document.getElementById('view-mybookings');
+    if (myBookingsView && myBookingsView.classList.contains('active') && typeof loadMyBookings === 'function') {
+      loadMyBookings();
+    }
+    var pendingCount = bookingsList.filter(function(x) {
+      var st = x.EffectiveStatus || x.Status;
+      return st === 'รออนุมัติ';
+    }).length;
+    updateMyBookingsBadge(pendingCount);
+  }
+
   if (hasNewApproval && approvedBooking) {
     Swal.fire({
       icon: 'success',
@@ -1077,6 +758,7 @@ function checkBookerStatusUpdates(bookingsList) {
       confirmButtonColor: '#16a34a',
       confirmButtonText: '<i class="bi bi-qr-code"></i> ดูรายละเอียด & QR Code'
     }).then(function() {
+      if (typeof loadMyBookings === 'function') loadMyBookings();
       openBookingDetailModal(approvedBooking.BookingID);
     });
   } else if (hasNewRejection && rejectedBooking) {
@@ -1086,107 +768,262 @@ function checkBookerStatusUpdates(bookingsList) {
       html: 'รายการจอง <strong>' + escapeHtml(rejectedBooking.Topic) + '</strong> (' + escapeHtml(rejectedBooking.RoomName) + ')<br>วันที่ ' + formatDisplayDateThai(rejectedBooking.Date) + ' ไม่ผ่านการอนุมัติ กรุณาตรวจสอบหรือเลือกช่วงเวลาใหม่',
       confirmButtonColor: '#0f4c81',
       confirmButtonText: 'รับทราบ'
+    }).then(function() {
+      if (typeof loadMyBookings === 'function') loadMyBookings();
     });
   }
+}
+
+/* ==========================================================================
+ * Kiosk Mode Management (Full Screen & Auto Refresh)
+ * ======================================================================== */
+var kioskTimer = null;
+var kioskClockTimer = null;
+
+function startKioskMode() {
+  enterFullscreen();
+  updateKioskClock();
+  loadKioskData();
+
+  if (!kioskTimer) {
+    kioskTimer = setInterval(loadKioskData, 30000);
+  }
+  if (!kioskClockTimer) {
+    kioskClockTimer = setInterval(updateKioskClock, 1000);
+  }
+}
+
+function stopKioskMode() {
+  if (kioskTimer) {
+    clearInterval(kioskTimer);
+    kioskTimer = null;
+  }
+  if (kioskClockTimer) {
+    clearInterval(kioskClockTimer);
+    kioskClockTimer = null;
+  }
+  exitFullscreen();
+}
+
+function enterFullscreen() {
+  var elem = document.documentElement;
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen().catch(function() {});
+  } else if (elem.webkitRequestFullscreen) {
+    elem.webkitRequestFullscreen();
+  } else if (elem.msRequestFullscreen) {
+    elem.msRequestFullscreen();
+  }
+}
+
+function exitFullscreen() {
+  if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(function() {});
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+}
+
+function updateKioskClock() {
+  var now = new Date();
+  var clockEl = document.getElementById('kioskClock');
+  var dateEl = document.getElementById('kioskDate');
+  if (clockEl) clockEl.textContent = now.toTimeString().split(' ')[0];
+  if (dateEl) dateEl.textContent = formatDisplayDateThai(todayIso());
+}
+
+function loadKioskData() {
+  var kioskOrgEl = document.getElementById('kioskOrgName');
+  if (kioskOrgEl && STATE.settings && STATE.settings.ORG_NAME) {
+    kioskOrgEl.textContent = STATE.settings.ORG_NAME;
+  }
+
+  callGas('getKioskRoomStatus')
+    .then(function(res) {
+      var data = res.data;
+      var grid = document.getElementById('kioskRoomGrid');
+      if (!grid) return;
+
+      var maxLimit = (data && data.maxUpcoming) ? data.maxUpcoming : 5;
+      var html = '';
+
+      data.rooms.forEach(function(r) {
+        var isBusy = (r.status === 'BUSY');
+        var isMaint = (r.status === 'MAINTENANCE');
+
+        var cardBg = isBusy ? '#7f1d1d' : (isMaint ? '#475569' : '#065f46');
+        var statusText = isBusy ? 'กำลังใช้งาน (BUSY)' : (isMaint ? 'ปิดปรับปรุง' : 'ห้องว่าง (AVAILABLE)');
+        var statusDot = isBusy ? '🔴' : (isMaint ? '🟡' : '🟢');
+
+        html += '<div style="background: #1e293b; border: 2px solid ' + (isBusy ? '#ef4444' : (isMaint ? '#94a3b8' : '#10b981')) + '; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); display: flex; flex-direction: column;">' +
+          '<div style="position: relative; height: 150px; background: #334155; flex-shrink: 0;">' +
+            '<img src="' + escapeHtml(r.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800') + '" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.75;">' +
+            '<div style="position: absolute; top: 12px; right: 12px; background: ' + cardBg + '; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">' +
+              statusDot + ' ' + statusText +
+            '</div>' +
+            '<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(15,23,42,0.95), transparent); padding: 15px 15px 8px 15px;">' +
+              '<h3 style="margin: 0; font-size: 19px; color: #fff; font-weight: 700;">' + escapeHtml(r.roomName) + '</h3>' +
+              '<div style="font-size: 12px; color: #94a3b8;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.building) + ' ' + escapeHtml(r.floor) + ' &bull; ความจุ ' + r.capacity + ' คน</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="padding: 16px; flex-grow: 1; display: flex; flex-direction: column;">';
+
+        if (isBusy && r.currentMeeting) {
+          var m = r.currentMeeting;
+          html += '<div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; flex-shrink: 0;">' +
+            '<div style="font-size: 11px; color: #f87171; font-weight: 700; text-transform: uppercase;">กำลังประชุมขณะนี้</div>' +
+            '<div style="font-size: 15px; font-weight: 700; color: #fff; margin: 2px 0;">' + escapeHtml(m.Topic) + '</div>' +
+            '<div style="font-size: 12.5px; color: #cbd5e1;"><i class="bi bi-clock"></i> ' + escapeHtml(m.StartTime) + ' - ' + escapeHtml(m.EndTime) + ' น.</div>' +
+            '<div style="font-size: 12px; color: #94a3b8; margin-top: 4px;"><i class="bi bi-person"></i> ผู้จอง: ' + escapeHtml(m.BookerName) + ' (' + escapeHtml(m.Department) + ')</div>' +
+          '</div>';
+        } else {
+          html += '<div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; color: #34d399; font-weight: 600; flex-shrink: 0;">' +
+            '<i class="bi bi-check-circle"></i> ห้องว่างพร้อมใช้งานในขณะนี้' +
+          '</div>';
+        }
+
+        html += '<div style="font-size: 12.5px; color: #94a3b8; border-top: 1px dashed #334155; padding-top: 10px; margin-top: auto;">' +
+          '<div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;"><i class="bi bi-calendar-event"></i> รายการจองถัดไป (สูงสุด ' + maxLimit + ' รายการ):</div>';
+
+        if (r.nextMeetings && r.nextMeetings.length > 0) {
+          html += '<div style="display: flex; flex-direction: column; gap: 6px;">';
+          r.nextMeetings.forEach(function(nm, idx) {
+            var dateBadge = (nm.Date !== data.date)
+              ? '<span style="background: rgba(56,189,248,0.2); color: #38bdf8; font-size: 10.5px; padding: 1px 6px; border-radius: 4px; margin-right: 4px;">' + formatDisplayDateThai(nm.Date) + '</span>'
+              : '';
+            html += '<div style="background: rgba(30, 41, 59, 0.7); padding: 6px 10px; border-radius: 6px; border: 1px solid #334155;">' +
+              '<div style="display: flex; justify-content: space-between; gap: 8px; color: #e2e8f0; font-weight: 600;">' +
+                '<span>' + (idx + 1) + '. ' + escapeHtml(nm.Topic) + '</span>' +
+                '<span style="color: #38bdf8; font-size: 12px; white-space: nowrap;">' + dateBadge + escapeHtml(nm.StartTime) + '-' + escapeHtml(nm.EndTime) + '</span>' +
+              '</div>' +
+              '<div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">ผู้จอง: ' + escapeHtml(nm.BookerName) + ' (' + escapeHtml(nm.Department) + ')</div>' +
+            '</div>';
+          });
+          html += '</div>';
+        } else {
+          html += '<div style="color: #64748b; font-style: italic;">ไม่มีรายการจองอื่นๆ เพิ่มเติม</div>';
+        }
+
+        html += '</div></div></div>';
+      });
+
+      grid.innerHTML = html;
+    })
+    .catch(function(err) {
+      console.error('Kiosk Load Error:', err);
+    });
 }
 
 /* ==========================================================================
  * Dynamic Time Slot Generation & Real-time Availability Checking
  * ======================================================================== */
 function updateTimeSlotOptions() {
-    var startSelect = document.getElementById('bkStart');
-    var endSelect = document.getElementById('bkEnd');
-    var dateInput = document.getElementById('bkDate');
-    if (!startSelect || !endSelect || !dateInput) return;
+  var startSelect = document.getElementById('bkStart');
+  var endSelect = document.getElementById('bkEnd');
+  var dateInput = document.getElementById('bkDate');
+  if (!startSelect || !endSelect || !dateInput) return;
 
-    var selectedDate = dateInput.value;
-    var today = todayIso();
-    var isToday = (selectedDate === today);
+  var selectedDate = dateInput.value;
+  var today = todayIso();
+  var isToday = (selectedDate === today);
 
-    var openTime = extractCleanTime(STATE.settings.OPEN_HOUR, '07:00');
-    var closeTime = extractCleanTime(STATE.settings.CLOSE_HOUR, '20:00');
-    var openMin = timeToMinutes(openTime);
-    var closeMin = timeToMinutes(closeTime);
+  var openTime = extractCleanTime(STATE.settings.OPEN_HOUR, '07:00');
+  var closeTime = extractCleanTime(STATE.settings.CLOSE_HOUR, '20:00');
+  var openMin = timeToMinutes(openTime);
+  var closeMin = timeToMinutes(closeTime);
 
-    var now = new Date();
-    var nowMinutes = now.getHours() * 60 + now.getMinutes();
+  var now = new Date();
+  var nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-    var startOptions = '';
-    var validStartCount = 0;
-    var firstValidStart = null;
-    var previousStartVal = startSelect.value;
+  var startOptions = '';
+  var validStartCount = 0;
+  var firstValidStart = null;
+  var previousStartVal = startSelect.value;
 
-    for (var m = openMin; m < closeMin; m += 30) {
-      // 🟢 กรองเวลาในอดีตออกเฉพาะเมื่อเป็น "วันนี้" เท่านั้น (ถ้าเป็นวันในอนาคต แสดงทั้งหมด)
-      if (isToday && m <= nowMinutes) {
-        continue;
-      }
-
-      var timeStr = minutesToTime(m);
-      if (!firstValidStart) firstValidStart = timeStr;
-      validStartCount++;
-
-      var sel = (timeStr === previousStartVal) ? 'selected' : '';
-      startOptions += '<option value="' + timeStr + '" ' + sel + '>' + timeStr + ' น.</option>';
+  for (var m = openMin; m < closeMin; m += 30) {
+    if (isToday && m <= nowMinutes) {
+      continue;
     }
 
-    if (validStartCount === 0 && isToday) {
-      startSelect.innerHTML = '<option value="">-- หมดเวลาจองสำหรับวันนี้ --</option>';
-      endSelect.innerHTML = '<option value="">-- ไม่สามารถจองได้ --</option>';
-      disableTimePresets(true);
-      updateDurationBadge();
-      triggerAutoCheckAvailability();
-      return;
-    }
+    var timeStr = minutesToTime(m);
+    if (!firstValidStart) firstValidStart = timeStr;
+    validStartCount++;
 
-    startSelect.innerHTML = startOptions;
-    
-    var hasPrev = false;
-    for (var i = 0; i < startSelect.options.length; i++) {
-      if (startSelect.options[i].value === previousStartVal) { hasPrev = true; break; }
-    }
-    startSelect.value = hasPrev ? previousStartVal : firstValidStart;
-
-    rebuildEndTimeOptions();
-    
-    // 🟢 สั่งอัปเดตสถานะปุ่ม Preset โดยส่งค่า isToday เข้าไปตรวจสอบ
-    disablePastPresetButtons(isToday, nowMinutes);
+    var sel = (timeStr === previousStartVal) ? 'selected' : '';
+    startOptions += '<option value="' + timeStr + '" ' + sel + '>' + timeStr + ' น.</option>';
   }
 
-  function disablePastPresetButtons(isToday, nowMinutes) {
-    var presets = document.querySelectorAll('.time-preset-btn');
-    
-    // 🟢 กฎเหล็ก: ถ้าไม่ใช่ "วันนี้" (เช่น เป็นวันในอนาคตที่เลือก) บังคับเปิดใช้งานปุ่มลัดทั้งหมดทันที 100% ห้ามเป็นสีเทา
-    if (!isToday) {
-      presets.forEach(function(btn) {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
-        btn.style.pointerEvents = 'auto';
-      });
-      return;
-    }
-
-    // 🟡 ถ้าเป็น "วันนี้" จึงค่อยเช็กเงื่อนไขเวลาปัจจุบันตามปกติ
-    if (presets[0]) {
-      var pastMorning = (nowMinutes >= timeToMinutes('12:00'));
-      presets[0].disabled = pastMorning;
-      presets[0].style.opacity = pastMorning ? '0.35' : '1';
-      presets[0].style.cursor = pastMorning ? 'not-allowed' : 'pointer';
-    }
-    if (presets[1]) {
-      var pastAfternoon = (nowMinutes >= timeToMinutes('16:30'));
-      presets[1].disabled = pastAfternoon;
-      presets[1].style.opacity = pastAfternoon ? '0.35' : '1';
-      presets[1].style.cursor = pastAfternoon ? 'not-allowed' : 'pointer';
-    }
-    if (presets[2]) {
-      var pastAllDay = (nowMinutes >= timeToMinutes('08:30'));
-      presets[2].disabled = pastAllDay;
-      presets[2].style.opacity = pastAllDay ? '0.35' : '1';
-      presets[2].style.cursor = pastAllDay ? 'not-allowed' : 'pointer';
-    }
+  if (validStartCount === 0 && isToday) {
+    startSelect.innerHTML = '<option value="">-- หมดเวลาจองสำหรับวันนี้ --</option>';
+    endSelect.innerHTML = '<option value="">-- ไม่สามารถจองได้ --</option>';
+    disableTimePresets(true);
+    updateDurationBadge();
+    triggerAutoCheckAvailability();
+    return;
   }
+
+  startSelect.innerHTML = startOptions;
+
+  var hasPrev = false;
+  for (var i = 0; i < startSelect.options.length; i++) {
+    if (startSelect.options[i].value === previousStartVal) { hasPrev = true; break; }
+  }
+  startSelect.value = hasPrev ? previousStartVal : firstValidStart;
+
+  rebuildEndTimeOptions();
+  disablePastPresetButtons(isToday, nowMinutes);
+}
+
+function disablePastPresetButtons(isToday, nowMinutes) {
+  var presets = document.querySelectorAll('.time-preset-btn');
+
+  if (!isToday) {
+    presets.forEach(function(btn) {
+      btn.disabled = false;
+      btn.style.opacity = '1';
+      btn.style.cursor = 'pointer';
+      btn.style.pointerEvents = 'auto';
+    });
+    return;
+  }
+
+  if (presets[0]) {
+    var pastMorning = (nowMinutes >= timeToMinutes('12:00'));
+    presets[0].disabled = pastMorning;
+    presets[0].style.opacity = pastMorning ? '0.35' : '1';
+    presets[0].style.cursor = pastMorning ? 'not-allowed' : 'pointer';
+  }
+  if (presets[1]) {
+    var pastAfternoon = (nowMinutes >= timeToMinutes('16:30'));
+    presets[1].disabled = pastAfternoon;
+    presets[1].style.opacity = pastAfternoon ? '0.35' : '1';
+    presets[1].style.cursor = pastAfternoon ? 'not-allowed' : 'pointer';
+  }
+  if (presets[2]) {
+    var pastAllDay = (nowMinutes >= timeToMinutes('08:30'));
+    presets[2].disabled = pastAllDay;
+    presets[2].style.opacity = pastAllDay ? '0.35' : '1';
+    presets[2].style.cursor = pastAllDay ? 'not-allowed' : 'pointer';
+  }
+  for (var k = 3; k < presets.length; k++) {
+    presets[k].disabled = false;
+    presets[k].style.opacity = '1';
+    presets[k].style.cursor = 'pointer';
+    presets[k].style.pointerEvents = 'auto';
+  }
+}
+
+function disableTimePresets(disabled) {
+  document.querySelectorAll('.time-preset-btn').forEach(function(b) {
+    b.disabled = disabled;
+    b.style.opacity = disabled ? '0.35' : '1';
+    b.style.cursor = disabled ? 'not-allowed' : 'pointer';
+  });
+}
 
 function rebuildEndTimeOptions() {
   var startSelect = document.getElementById('bkStart');
@@ -1271,51 +1108,44 @@ function applyTimeDuration(mins, btn) {
   triggerAutoCheckAvailability();
 }
 
- function applyTimePreset(startTime, endTime, btn) {
-    var startSelect = document.getElementById('bkStart');
-    var endSelect = document.getElementById('bkEnd');
-    var dateInput = document.getElementById('bkDate');
-    var isToday = (dateInput && dateInput.value === todayIso());
+function applyTimePreset(startTime, endTime, btn) {
+  var startSelect = document.getElementById('bkStart');
+  var endSelect = document.getElementById('bkEnd');
+  var dateInput = document.getElementById('bkDate');
+  var isToday = (dateInput && dateInput.value === todayIso());
 
-    // ตรวจสอบเฉพาะเมื่อจองสำหรับ "วันนี้" และเวลาเริ่มต้นผ่านไปแล้ว
-    if (isToday) {
-      var now = new Date();
-      var nowMinutes = now.getHours() * 60 + now.getMinutes();
-      if (timeToMinutes(startTime) <= nowMinutes) {
-        showToast('เวลาเริ่มต้น ' + startTime + ' น. ได้ผ่านไปแล้วสำหรับวันนี้', 'warning');
-        return;
-      }
+  if (isToday) {
+    var now = new Date();
+    var nowMinutes = now.getHours() * 60 + now.getMinutes();
+    if (timeToMinutes(startTime) <= nowMinutes) {
+      showToast('เวลาเริ่มต้น ' + startTime + ' น. ได้ผ่านไปแล้วสำหรับวันนี้', 'warning');
+      return;
     }
-
-    ensureTimeOptionExists(startSelect, startTime);
-    startSelect.value = startTime;
-
-    rebuildEndTimeOptions();
-    ensureTimeOptionExists(endSelect, endTime);
-    endSelect.value = endTime;
-
-    // เคลียร์และเซ็ต Active ให้ปุ่มที่ถูกกด
-    document.querySelectorAll('.time-preset-btn').forEach(function(b) { 
-      b.classList.remove('active'); 
-    });
-    
-    if (btn) {
-      btn.classList.add('active');
-    } else {
-      // ค้นหาปุ่มที่ตรงกับช่วงเวลาแล้วใส่ class active ให้
-      document.querySelectorAll('.time-preset-btn').forEach(function(b) {
-        if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf(startTime) !== -1) {
-          b.classList.add('active');
-        }
-      });
-    }
-
-    updateDurationBadge();
-    triggerAutoCheckAvailability();
   }
 
-function disableTimePresets(disabled) {
-  document.querySelectorAll('.time-preset-btn').forEach(function(b) { b.disabled = disabled; b.style.opacity = disabled ? '0.35' : '1'; });
+  ensureTimeOptionExists(startSelect, startTime);
+  startSelect.value = startTime;
+
+  rebuildEndTimeOptions();
+  ensureTimeOptionExists(endSelect, endTime);
+  endSelect.value = endTime;
+
+  document.querySelectorAll('.time-preset-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+
+  if (btn) {
+    btn.classList.add('active');
+  } else {
+    document.querySelectorAll('.time-preset-btn').forEach(function(b) {
+      if (b.getAttribute('onclick') && b.getAttribute('onclick').indexOf(startTime) !== -1) {
+        b.classList.add('active');
+      }
+    });
+  }
+
+  updateDurationBadge();
+  triggerAutoCheckAvailability();
 }
 
 var autoCheckTimer = null;
@@ -1333,7 +1163,7 @@ function performLiveAvailabilityCheck() {
   if (!banner) return;
 
   if (!roomId || !date || !startTime || !endTime) { banner.innerHTML = ''; return; }
-  
+
   if (timeToMinutes(startTime) >= timeToMinutes(endTime)) {
     banner.innerHTML = '<div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 5px solid #dc2626; padding: 14px 18px; border-radius: 10px; color: #991b1b; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">' +
       '<i class="bi bi-exclamation-triangle-fill" style="font-size: 22px; color: #dc2626;"></i>' +
@@ -1349,7 +1179,6 @@ function performLiveAvailabilityCheck() {
     .then(function(res) {
       var avail = res.data;
       if (avail.available) {
-        // ดีไซน์กล่อง "ห้องว่าง พร้อมจอง" แบบ Modern พรีเมียม
         banner.innerHTML = '<div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1px solid #bbf7d0; border-left: 5px solid #16a34a; padding: 16px 20px; border-radius: 12px; color: #166534; display: flex; align-items: center; gap: 14px; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.1);">' +
           '<div style="background: #16a34a; color: #fff; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;"><i class="bi bi-check-lg"></i></div>' +
           '<div>' +
@@ -1357,14 +1186,13 @@ function performLiveAvailabilityCheck() {
             '<div style="font-size: 13.5px; color: #166534; margin-top: 2px;">ในช่วงเวลา <strong>' + startTime + ' - ' + endTime + ' น.</strong> สามารถดำเนินการจองต่อได้ทันที</div>' +
           '</div></div>';
       } else {
-        // ดีไซน์กล่อง "ไม่ว่าง / ชนเวลากับผู้อื่น" พร้อมช่วงเวลาแนะนำที่สวยงามขึ้น
         var html = '<div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 1px solid #fecaca; border-left: 5px solid #dc2626; padding: 16px 20px; border-radius: 12px; color: #991b1b; box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.1);">' +
           '<div style="display: flex; align-items: flex-start; gap: 14px;">' +
             '<div style="background: #dc2626; color: #fff; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;"><i class="bi bi-x-lg"></i></div>' +
             '<div style="width: 100%;">' +
               '<div style="font-size: 15px; font-weight: 700; color: #7f1d1d;">ไม่สามารถจองได้ เนื่องจากห้องถูกใช้งานในช่วงเวลานี้แล้ว</div>' +
               '<div style="font-size: 13px; color: #b91c1c; margin-top: 2px;">กรุณาเลือกช่วงเวลาอื่น หรือพิจารณาเลือกช่วงเวลาว่างใกล้เคียงด้านล่าง:</div>';
-        
+
         if (avail.suggestedSlots && avail.suggestedSlots.length > 0) {
           html += '<div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">';
           avail.suggestedSlots.forEach(function(s) {
@@ -1374,7 +1202,7 @@ function performLiveAvailabilityCheck() {
           });
           html += '</div>';
         }
-        
+
         html += '</div></div></div>';
         banner.innerHTML = html;
       }
@@ -1386,6 +1214,130 @@ function performLiveAvailabilityCheck() {
 
 function checkAvailabilityClick() { performLiveAvailabilityCheck(); }
 function applySuggestedTime(s, e) { applyTimePreset(s, e); }
+
+/* ==========================================================================
+ * Date Synchronization & Availability Flow
+ * ======================================================================== */
+function handleDateSelectionChange(selectedDate) {
+  if (!selectedDate) return;
+
+  var availInput = document.getElementById('availCheckDate');
+  var bkInput = document.getElementById('bkDate');
+
+  if (availInput && availInput.value !== selectedDate) {
+    availInput.value = selectedDate;
+    if (availInput._flatpickr) {
+      availInput._flatpickr.setDate(selectedDate, false);
+      formatFlatpickrThaiYear_(availInput._flatpickr);
+    }
+  }
+  if (bkInput && bkInput.value !== selectedDate) {
+    bkInput.value = selectedDate;
+    if (bkInput._flatpickr) {
+      bkInput._flatpickr.setDate(selectedDate, false);
+      formatFlatpickrThaiYear_(bkInput._flatpickr);
+    }
+  }
+
+  var chkBox = document.getElementById('availabilityCheckBox');
+  if (chkBox) chkBox.innerHTML = '';
+
+  document.querySelectorAll('.time-preset-btn').forEach(function(btn) {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    btn.style.pointerEvents = 'auto';
+  });
+
+  updateTimeSlotOptions();
+  fetchAndRenderRoomAvailability(selectedDate);
+  triggerAutoCheckAvailability();
+}
+
+function syncDateFromForm() {
+  var bkInput = document.getElementById('bkDate');
+  if (bkInput && bkInput.value) {
+    handleDateSelectionChange(bkInput.value);
+  }
+}
+
+function onBookingDateChanged() {
+  var availInput = document.getElementById('availCheckDate');
+  if (availInput && availInput.value) {
+    handleDateSelectionChange(availInput.value);
+  }
+}
+
+function fetchAndRenderRoomAvailability(dateVal) {
+  var container = document.getElementById('roomAvailCards');
+  if (!container) return;
+
+  container.innerHTML = '<div style="color:var(--muted); padding:10px 0;"><i class="bi bi-arrow-repeat spin"></i> กำลังตรวจสอบสถานะห้องประชุมประจำวัน...</div>';
+
+  callGas('getRoomAvailabilityForDate', dateVal)
+    .then(function(res) {
+      var rooms = res.data.rooms || [];
+      var currentSelected = document.getElementById('bkRoomId').value;
+
+      var html = '';
+      rooms.forEach(function(r) {
+        var isFree = (r.statusType === 'FREE');
+        var dot = isFree ? '🟢' : '🔴';
+        var statusCls = isFree ? 'avail-free' : 'avail-busy';
+        var selectedCls = (r.RoomID === currentSelected) ? 'selected' : '';
+
+        var statusHtml = '';
+        if (isFree) {
+          statusHtml = '— ว่างทั้งวัน';
+        } else if (r.statusType === 'FULL') {
+          statusHtml = '— <span style="color:#dc2626; font-weight:600;">ไม่ว่างทั้งวัน</span>';
+          if (r.bookedSlots && r.bookedSlots.length > 0) {
+            statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
+            r.bookedSlots.forEach(function(s) {
+              statusHtml += '<div>• ช่วงเวลา ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
+            });
+            statusHtml += '</div>';
+          }
+        } else {
+          statusHtml = '— <span style="color:#d97706; font-weight:600;">มีช่วงเวลาที่ไม่ว่าง:</span>';
+          if (r.bookedSlots && r.bookedSlots.length > 0) {
+            statusHtml += '<div style="margin-top:4px; font-size:12.5px; color:#475569;">';
+            r.bookedSlots.forEach(function(s) {
+              statusHtml += '<div>🔴 ถูกจอง ' + s.startTime + ' - ' + s.endTime + ' น. (' + escapeHtml(s.topic) + ')</div>';
+            });
+            statusHtml += '</div>';
+          }
+        }
+
+        html += '<div class="avail-item ' + selectedCls + '" data-room-id="' + escapeHtml(r.RoomID) + '" onclick="selectRoomFromAvail(\'' + escapeHtml(r.RoomID) + '\')">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+          '<strong>' + escapeHtml(r.RoomName) + '</strong>' +
+          '<small style="color:var(--muted);">ความจุ ' + r.Capacity + ' คน</small>' +
+          '</div>' +
+          '<div class="avail-status ' + statusCls + '" style="margin-top:6px;">' + dot + ' ' + statusHtml + '</div>' +
+          '</div>';
+      });
+      container.innerHTML = html;
+    })
+    .catch(function(err) {
+      container.innerHTML = '<div class="alert alert-danger">ไม่สามารถโหลดสถานะห้องว่างได้: ' + escapeHtml(err.message) + '</div>';
+    });
+}
+
+function selectRoomFromAvail(roomId) {
+  var select = document.getElementById('bkRoomId');
+  if (select) select.value = roomId;
+  syncSelectedRoomCard();
+  triggerAutoCheckAvailability();
+}
+
+function syncSelectedRoomCard() {
+  var selectedId = document.getElementById('bkRoomId').value;
+  var items = document.querySelectorAll('.avail-item');
+  items.forEach(function(el) {
+    el.classList.toggle('selected', el.getAttribute('data-room-id') === selectedId);
+  });
+}
 
 /* ==========================================================================
  * Seating Layout Selector & Automatic Mapping
@@ -1480,24 +1432,10 @@ function switchPreviewMode(mode) {
     if (btnDia) btnDia.className = 'btn btn-outline btn-sm';
   }
 }
+
 /* ==========================================================================
- * Booking Flow, Summary Modal & Redirect to My Bookings
+ * Booking Submission & Summary Confirmation
  * ======================================================================== */
-function selectRoomFromAvail(roomId) {
-  var select = document.getElementById('bkRoomId');
-  if (select) select.value = roomId;
-  syncSelectedRoomCard();
-  triggerAutoCheckAvailability();
-}
-
-function syncSelectedRoomCard() {
-  var selectedId = document.getElementById('bkRoomId').value;
-  var items = document.querySelectorAll('.avail-item');
-  items.forEach(function(el) {
-    el.classList.toggle('selected', el.getAttribute('data-room-id') === selectedId);
-  });
-}
-
 function submitBookingForm(e) {
   e.preventDefault();
   var seatingVal = document.getElementById('bkSeatingLayout') ? document.getElementById('bkSeatingLayout').value : 'แบบชั้นเรียน (Classroom)';
@@ -1605,12 +1543,27 @@ function executeBookingSubmit(payload) {
 
       refreshBadgesImmediately();
       if (typeof loadCalendarEvents === 'function') {
-        loadCalendarEvents(); // อัปเดตข้อมูลในปฏิทินทันที
+        loadCalendarEvents();
       }
 
       document.getElementById('bookingForm').reset();
-      document.getElementById('bkDate').value = payload.date;
-      document.getElementById('availCheckDate').value = payload.date;
+
+      var bkInput = document.getElementById('bkDate');
+      var availInput = document.getElementById('availCheckDate');
+      if (bkInput) {
+        bkInput.value = payload.date;
+        if (bkInput._flatpickr) {
+          bkInput._flatpickr.setDate(payload.date, false);
+          formatFlatpickrThaiYear_(bkInput._flatpickr);
+        }
+      }
+      if (availInput) {
+        availInput.value = payload.date;
+        if (availInput._flatpickr) {
+          availInput._flatpickr.setDate(payload.date, false);
+          formatFlatpickrThaiYear_(availInput._flatpickr);
+        }
+      }
 
       if (STATE.user.authenticated) {
         document.getElementById('bkName').value = STATE.user.name || '';
@@ -1619,7 +1572,7 @@ function executeBookingSubmit(payload) {
         if (STATE.user.phone) document.getElementById('bkPhone').value = STATE.user.phone;
       }
 
-      onBookingDateChanged();
+      handleDateSelectionChange(payload.date);
       renderBookingLayoutCards();
 
       Swal.fire({
@@ -1654,8 +1607,6 @@ function renderRoomsDirectory() {
   var html = '';
   STATE.rooms.forEach(function(r) {
     var img = r.ImageURL || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800';
-    
-    // ปรับปรุงเลย์เอาต์การ์ดห้องประชุมให้มีความสูงคงที่ รูปภาพขนาดพอดี และจัดวางปุ่มจองไว้ชิดล่างเสมอ
     html += '<div style="background:#fff; border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 1px 3px 0 rgba(0,0,0,0.05);">' +
       '<div style="position:relative; height:200px; background:#e2e8f0; overflow:hidden;">' +
         '<img src="' + escapeHtml(img) + '" alt="' + escapeHtml(r.RoomName) + '" style="width:100%; height:100%; object-fit:cover;">' +
@@ -1663,7 +1614,7 @@ function renderRoomsDirectory() {
       '</div>' +
       '<div style="padding:18px; flex-grow:1; display:flex; flex-direction:column;">' +
         '<h3 style="font-size:18px; color:var(--primary); font-weight:700; margin-bottom:6px;">' + escapeHtml(r.RoomName) + '</h3>' +
-        '<div style="font-size:13.5px; color:var(--muted); margin-bottom:10px;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.Building) + ' ชั้น ' + escapeHtml(r.Floor) + '</div>' +
+        '<div style="font-size:13.5px; color:var(--muted); margin-bottom:10px;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.Building) + ' ' + escapeHtml(r.Floor) + '</div>' +
         '<p style="font-size:13.5px; color:#475569; margin-bottom:12px; line-height:1.5;">' + escapeHtml(r.Description || 'ไม่มีรายละเอียดเพิ่มเติม') + '</p>' +
         '<div style="font-size:13px; color:var(--muted); margin-bottom:16px; background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #f1f5f9;">' +
           '<div style="margin-bottom:4px;"><strong>อุปกรณ์:</strong> ' + escapeHtml(r.Equipment || '-') + '</div>' +
@@ -1696,9 +1647,6 @@ function quickBookRoom(roomId) {
   setTimeout(function() { selectRoomFromAvail(roomId); }, 150);
 }
 
-/**
- * โหลดและแสดงรายการจองของฉัน พร้อมอัปเดตตัวเลข Badge และตรวจสอบสถานะอนุมัติ
- */
 function loadMyBookings() {
   var emailInput = document.getElementById('myBookingEmailInput').value.trim();
   var tbody = document.getElementById('myBookingsBody');
@@ -1713,15 +1661,14 @@ function loadMyBookings() {
   callGas('searchBookings', STATE.token, { myOnly: true, userEmail: emailInput })
     .then(function(res) {
       var list = res.data || [];
-      
-      // คำนวณจำนวนรายการจองที่ยัง Active อยู่ (รออนุมัติ หรือ อนุมัติแล้ว) เพื่อนําไปแสดง Badge สีแดง
-      var activeCount = list.filter(function(x) {
+
+      // นับเฉพาะรายการจองที่อยู่ในสถานะ "รออนุมัติ" เท่านั้น เพื่อแสดง Badge สีแดง
+      var pendingCount = list.filter(function(x) {
         var st = x.EffectiveStatus || x.Status;
-        return st === 'รออนุมัติ' || st === 'อนุมัติ';
+        return st === 'รออนุมัติ';
       }).length;
-      updateMyBookingsBadge(activeCount);
-      
-      // ตรวจสอบและเด้ง Popup แจ้งผลการอนุมัติ/ไม่อนุมัติอัตโนมัติ
+      updateMyBookingsBadge(pendingCount);
+
       checkBookerStatusUpdates(list);
 
       if (list.length === 0) {
@@ -1783,9 +1730,8 @@ function cancelMyBooking(bookingId) {
   }).then(function(result) {
     if (result.isConfirmed) {
       setLoading(true, 'กำลังดำเนินการยกเลิกและแจ้งเตือนผู้ดูแล...');
-      // 📌 ส่งค่า cancelReason ไปในออบเจกต์ payload
       callGas('cancelBooking', STATE.token, { bookingId: bookingId, cancelReason: result.value.trim() })
-        .then(function(res) {
+        .then(function() {
           Swal.fire({
             icon: 'success',
             title: 'ยกเลิกการจองสำเร็จ',
@@ -1848,7 +1794,11 @@ function runBookingSearch() {
 function resetBookingSearch() {
   document.getElementById('searchQuery').value = '';
   document.getElementById('searchRoom').value = '';
-  document.getElementById('searchDate').value = '';
+  var sd = document.getElementById('searchDate');
+  if (sd) {
+    sd.value = '';
+    if (sd._flatpickr) sd._flatpickr.clear();
+  }
   document.getElementById('searchStatus').value = '';
   runBookingSearch();
 }
@@ -1886,8 +1836,8 @@ function openBookingDetailModal(bookingId) {
             '<i class="bi bi-file-earmark-pdf-fill" style="color:#dc2626;"></i> พิมพ์ / ดาวน์โหลดใบขอใช้ห้องประชุม (PDF)' +
           '</button>' +
         '</div>' +
-        '<div class="qr-box">' +
-        '<div id="detailQrContainer"></div>' +
+        '<div class="qr-box" style="margin-top:15px; text-align:center;">' +
+        '<div id="detailQrContainer" style="display:inline-block;"></div><br>' +
         '<small style="margin-top:8px; color:var(--muted);">สแกน QR Code เพื่อเปิดดูข้อมูลการจองนี้</small>' +
         '</div>';
 
@@ -1925,7 +1875,7 @@ function loadCalendarEvents() {
   var filterEl = document.getElementById('calendarRoomFilter');
   var roomId = filterEl ? filterEl.value : '';
   var legendEl = document.getElementById('calendarLegend');
-  
+
   if (legendEl && STATE.rooms) {
     legendEl.innerHTML = STATE.rooms.map(function(r) {
       return '<span class="legend-item"><span class="legend-dot" style="background:' + escapeHtml(r.Color) + '"></span>' + escapeHtml(r.RoomName) + '</span>';
@@ -1960,7 +1910,6 @@ function loadCalendarEvents() {
           day: 'วัน',
           listMonth: 'รายการ'
         },
-        // ปรับแต่งการแสดงผลในมุมมองแบบรายการ (List View)
         views: {
           listMonth: {
             eventContent: function(arg) {
@@ -1992,7 +1941,6 @@ function loadCalendarEvents() {
       });
       STATE.calendarInstance.render();
 
-      // ป้องกันปัญหาปฏิทินไม่แสดงผลเต็มขนาดเมื่อเปลี่ยนแท็บ
       setTimeout(function() {
         if (STATE.calendarInstance) {
           STATE.calendarInstance.updateSize();
@@ -2010,9 +1958,6 @@ function loadCalendarEvents() {
 /* ==========================================================================
  * Authentication, Google Identity Services (GIS) & Profile Management
  * ======================================================================== */
-/**
- * เปิดหน้าต่าง Modal สำหรับเข้าสู่ระบบหรือลงทะเบียน
- */
 function openLoginModal() {
   openModal('loginModal');
 }
@@ -2202,6 +2147,7 @@ function handleLogout() {
           STATE.user = { authenticated: false, role: 'Guest', email: '', name: '', department: '', phone: '', googleLinked: false };
           stopNotificationPolling();
           updateAuthUI();
+          closeModal('profileModal');
           setLoading(false);
           showToast('ออกจากระบบเรียบร้อยแล้ว', 'info');
           navigateTo('dashboard');
@@ -2236,7 +2182,6 @@ function handleGoogleSignInCallback(response) {
     return;
   }
 
-  // กรณีผู้ใช้ล็อกอินอยู่แล้ว (กดผูกบัญชีจากหน้าโปรไฟล์)
   if (STATE.user && STATE.user.authenticated) {
     setLoading(true, 'กำลังผูกบัญชีเข้ากับ Google...');
     callGas('toggleGoogleBinding', STATE.token, { idToken: response.credential, actionType: 'link' })
@@ -2252,7 +2197,6 @@ function handleGoogleSignInCallback(response) {
     return;
   }
 
-  // กรณีเข้าสู่ระบบใหม่ด้วย Google
   setLoading(true, 'กำลังตรวจสอบบัญชี Google...');
   callGas('loginWithGoogle', { idToken: response.credential })
     .then(function(res) {
@@ -2419,12 +2363,10 @@ function loadDashboard() {
 
       updatePendingBadgeCount(kpis.pendingCount);
 
-      // กราฟเดิม
       renderBarChart('chartByRoom', charts.byRoom.labels, charts.byRoom.values, 'จำนวนครั้งที่ใช้งาน', '#0284c7');
       renderLineChart('chartByMonth', charts.byMonth.labels, charts.byMonth.values);
       renderDoughnutChart('chartByStatus', charts.byStatus.labels, charts.byStatus.values);
 
-      // 🟢 เพิ่มการเรนเดอร์กราฟสถิติแยกตามหน่วยงาน (แนวนอน อ่านชื่อกอง/สำนักง่าย)
       if (charts.byDepartment) {
         renderHorizontalBarChart('chartByDepartment', charts.byDepartment.labels, charts.byDepartment.values, 'จำนวนการจอง', '#0d9488');
       }
@@ -2465,25 +2407,27 @@ function loadDashboard() {
     })
     .catch(function(err) { showToast(err.message, 'error'); });
 }
+
 function renderHorizontalBarChart(canvasId, labels, data, label, color) {
   if (STATE.charts[canvasId]) STATE.charts[canvasId].destroy();
   var ctx = document.getElementById(canvasId);
   if (!ctx) return;
   STATE.charts[canvasId] = new Chart(ctx, {
-    type: 'bar', // ใช้ bar แต่สลับ indexAxis เป็น y เพื่อให้ชื่อกองยาวๆ อ่านง่ายขึ้น
-    data: { 
-      labels: labels, 
-      datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 6 }] 
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ label: label, data: data, backgroundColor: color, borderRadius: 6 }]
     },
-    options: { 
-      indexAxis: 'y', // ทำให้เป็นกราฟแท่งแนวนอน (เหมาะกับชื่อหน่วยงานที่ค่อนข้างยาว)
-      responsive: true, 
+    options: {
+      indexAxis: 'y',
+      responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } }, 
-      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } 
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
     }
   });
 }
+
 function renderBarChart(canvasId, labels, data, label, color) {
   if (STATE.charts[canvasId]) STATE.charts[canvasId].destroy();
   var ctx = document.getElementById(canvasId);
@@ -2560,41 +2504,81 @@ function rejectFromDashboard(bookingId) {
 }
 
 /* ==========================================================================
- * Standalone Approval View (Approver & Admin)
+ * Standalone Approval View with Live Search & Filter (Approver & Admin)
  * ======================================================================== */
+var windowApprovalCache = [];
+
 function loadApprovalViewData() {
   callGas('searchBookings', STATE.token, { status: 'รออนุมัติ' })
     .then(function(res) {
       var list = res.data || [];
+      windowApprovalCache = list;
       updatePendingBadgeCount(list.length);
 
-      var tbody = document.getElementById('standaloneApprovalBody');
-      if (!tbody) return;
-
-      if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;"><i class="bi bi-check-circle" style="font-size:24px; color:#16a34a;"></i><br>ไม่มีรายการจองที่รอการอนุมัติในขณะนี้</td></tr>';
-        return;
+      var roomFilter = document.getElementById('approvalRoomFilter');
+      if (roomFilter && STATE.rooms) {
+        var curVal = roomFilter.value;
+        var rOpts = '<option value="">ทุกห้องประชุม</option>';
+        STATE.rooms.forEach(function(r) {
+          rOpts += '<option value="' + escapeHtml(r.RoomName) + '">' + escapeHtml(r.RoomName) + '</option>';
+        });
+        roomFilter.innerHTML = rOpts;
+        roomFilter.value = curVal;
       }
 
-      var html = '';
-      list.forEach(function(b) {
-        var thaiDate = formatDisplayDateThai(b.Date);
-        html += '<tr>' +
-          '<td><strong>' + escapeHtml(b.BookingID) + '</strong></td>' +
-          '<td>' + escapeHtml(thaiDate) + '<br><small>' + escapeHtml(b.StartTime) + '–' + escapeHtml(b.EndTime) + ' น.</small></td>' +
-          '<td>' + escapeHtml(b.RoomName) + '</td>' +
-          '<td>' + escapeHtml(b.Topic) + '</td>' +
-          '<td>' + escapeHtml(b.BookerName) + '<br><small style="color:var(--muted);">' + escapeHtml(b.Department) + '</small></td>' +
-          '<td>' + b.Participants + ' คน</td>' +
-          '<td style="white-space:nowrap;">' +
-            '<button class="btn btn-success btn-sm" onclick="approveFromView(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-check-lg"></i> อนุมัติ</button> ' +
-            '<button class="btn btn-danger btn-sm" onclick="rejectFromView(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-x-lg"></i> ไม่อนุมัติ</button> ' +
-            '<button class="btn btn-light btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-eye"></i></button>' +
-          '</td></tr>';
-      });
-      tbody.innerHTML = html;
+      renderApprovalTable(list);
     })
     .catch(function(err) { showToast(err.message, 'error'); });
+}
+
+function renderApprovalTable(list) {
+  var tbody = document.getElementById('standaloneApprovalBody');
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;"><i class="bi bi-check-circle" style="font-size:24px; color:#16a34a;"></i><br>ไม่พบรายการจองที่รอการอนุมัติ</td></tr>';
+    return;
+  }
+
+  var html = '';
+  list.forEach(function(b) {
+    var thaiDate = formatDisplayDateThai(b.Date);
+    html += '<tr>' +
+      '<td><strong>' + escapeHtml(b.BookingID) + '</strong></td>' +
+      '<td>' + escapeHtml(thaiDate) + '<br><small>' + escapeHtml(b.StartTime) + '–' + escapeHtml(b.EndTime) + ' น.</small></td>' +
+      '<td>' + escapeHtml(b.RoomName) + '</td>' +
+      '<td>' + escapeHtml(b.Topic) + '</td>' +
+      '<td>' + escapeHtml(b.BookerName) + '<br><small style="color:var(--muted);">' + escapeHtml(b.Department) + '</small></td>' +
+      '<td>' + b.Participants + ' คน</td>' +
+      '<td style="white-space:nowrap;">' +
+        '<button class="btn btn-success btn-sm" onclick="approveFromView(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-check-lg"></i> อนุมัติ</button> ' +
+        '<button class="btn btn-danger btn-sm" onclick="rejectFromView(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-x-lg"></i> ไม่อนุมัติ</button> ' +
+        '<button class="btn btn-light btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-eye"></i></button>' +
+      '</td></tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function filterApprovalTable() {
+  var qEl = document.getElementById('approvalSearchQuery');
+  var rEl = document.getElementById('approvalRoomFilter');
+  var query = qEl ? qEl.value.toLowerCase().trim() : '';
+  var roomNameFilter = rEl ? rEl.value.trim() : '';
+
+  var filtered = windowApprovalCache.filter(function(b) {
+    if (roomNameFilter && String(b.RoomName || '').trim() !== roomNameFilter) {
+      return false;
+    }
+    if (query) {
+      var textMatch = [
+        b.BookingID, b.Topic, b.BookerName, b.Department, b.RoomName, b.UserEmail
+      ].join(' ').toLowerCase();
+      if (textMatch.indexOf(query) === -1) return false;
+    }
+    return true;
+  });
+
+  renderApprovalTable(filtered);
 }
 
 function approveFromView(bookingId) {
@@ -2643,15 +2627,29 @@ function loadAdminView() {
   document.querySelectorAll('.admin-only-tab').forEach(function(el) {
     el.style.display = isAdmin ? 'inline-flex' : 'none';
   });
-  loadAdminBookings();
+  var firstBtn = document.querySelector('#view-admin .tab-btn');
+  switchAdminTab('approval', firstBtn);
 }
 
 function switchAdminTab(tab, btn) {
-  document.querySelectorAll('#view-admin .tab-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.querySelectorAll('#view-admin .tab-panel').forEach(function(p) { p.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
+  document.querySelectorAll('#view-admin .tab-btn').forEach(function(b) {
+    b.classList.remove('active', 'btn-primary');
+    if (!b.classList.contains('btn-outline')) b.classList.add('btn-outline');
+  });
+  document.querySelectorAll('#view-admin .tab-panel').forEach(function(p) {
+    p.classList.remove('active');
+    p.style.display = 'none';
+  });
+
+  if (btn) {
+    btn.classList.add('active', 'btn-primary');
+    btn.classList.remove('btn-outline');
+  }
   var panel = document.getElementById('admin-tab-' + tab);
-  if (panel) panel.classList.add('active');
+  if (panel) {
+    panel.classList.add('active');
+    panel.style.display = 'block';
+  }
 
   if (tab === 'approval' || tab === 'allbookings') loadAdminBookings();
   else if (tab === 'rooms') loadAdminRooms();
@@ -2664,19 +2662,22 @@ function loadAdminSettings() {
   callGas('getAdminSettings', STATE.token)
     .then(function(res) {
       var s = res.data || {};
-      document.getElementById('setOrgName').value = s.ORG_NAME || '';
-      if (document.getElementById('setFrontendUrl')) {
-        document.getElementById('setFrontendUrl').value = s.FRONTEND_URL || '';
+      function setSafeVal(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.value = val;
       }
-      document.getElementById('setOpenHour').value = extractCleanTime(s.OPEN_HOUR, '07:00');
-      document.getElementById('setCloseHour').value = extractCleanTime(s.CLOSE_HOUR, '20:00');
 
-      // 🟢 โหลดค่าฟิลด์ขั้นสูงใส่ฟอร์ม
-      if (document.getElementById('setSpreadsheetId')) document.getElementById('setSpreadsheetId').value = s.SPREADSHEET_ID || '';
-      if (document.getElementById('setCalendarId')) document.getElementById('setCalendarId').value = s.CALENDAR_ID || '';
-      if (document.getElementById('setDriveFolderId')) document.getElementById('setDriveFolderId').value = s.DRIVE_FOLDER_ID || '';
-      if (document.getElementById('setChatWebhookUrl')) document.getElementById('setChatWebhookUrl').value = s.CHAT_WEBHOOK_URL || '';
-      if (document.getElementById('setAdminNotifyEmail')) document.getElementById('setAdminNotifyEmail').value = s.ADMIN_NOTIFY_EMAIL || '';
+      setSafeVal('setOrgName', s.ORG_NAME || '');
+      setSafeVal('setFrontendUrl', s.FRONTEND_URL || '');
+      setSafeVal('setOpenHour', extractCleanTime(s.OPEN_HOUR, '07:00'));
+      setSafeVal('setCloseHour', extractCleanTime(s.CLOSE_HOUR, '20:00'));
+      setSafeVal('setKioskMaxUpcoming', s.KIOSK_MAX_UPCOMING || '5');
+
+      setSafeVal('setSpreadsheetId', s.SPREADSHEET_ID || '');
+      setSafeVal('setCalendarId', s.CALENDAR_ID || '');
+      setSafeVal('setDriveFolderId', s.DRIVE_FOLDER_ID || '');
+      setSafeVal('setChatWebhookUrl', s.CHAT_WEBHOOK_URL || '');
+      setSafeVal('setAdminNotifyEmail', s.ADMIN_NOTIFY_EMAIL || '');
 
       setSelectValue('setRequireApproval', s.REQUIRE_APPROVAL, 'TRUE');
       setSelectValue('setCalendarSync', s.ENABLE_CALENDAR_SYNC, 'TRUE');
@@ -2698,38 +2699,49 @@ function setSelectValue(elementId, val, defaultVal) {
 function submitAdminSettings(e) {
   e.preventDefault();
   setLoading(true, 'กำลังบันทึกการตั้งค่าระบบ...');
-  var payload = {
-    ORG_NAME: document.getElementById('setOrgName').value.trim(),
-    FRONTEND_URL: document.getElementById('setFrontendUrl') ? document.getElementById('setFrontendUrl').value.trim() : '',
-    OPEN_HOUR: document.getElementById('setOpenHour').value,
-    CLOSE_HOUR: document.getElementById('setCloseHour').value,
-    
-    // 🟢 เก็บค่าฟิลด์ขั้นสูงส่งไปบันทึก
-    SPREADSHEET_ID: document.getElementById('setSpreadsheetId') ? document.getElementById('setSpreadsheetId').value.trim() : '',
-    CALENDAR_ID: document.getElementById('setCalendarId') ? document.getElementById('setCalendarId').value.trim() : '',
-    DRIVE_FOLDER_ID: document.getElementById('setDriveFolderId') ? document.getElementById('setDriveFolderId').value.trim() : '',
-    CHAT_WEBHOOK_URL: document.getElementById('setChatWebhookUrl') ? document.getElementById('setChatWebhookUrl').value.trim() : '',
-    ADMIN_NOTIFY_EMAIL: document.getElementById('setAdminNotifyEmail') ? document.getElementById('setAdminNotifyEmail').value.trim() : '',
 
-    REQUIRE_APPROVAL: document.getElementById('setRequireApproval').value,
-    ENABLE_CALENDAR_SYNC: document.getElementById('setCalendarSync').value,
-    ENABLE_CHAT_NOTIFY: document.getElementById('setChatNotify').value,
-    REMINDER_1D: document.getElementById('setRemind1D').value,
-    REMINDER_2H: document.getElementById('setRemind2H').value,
-    REMINDER_30M: document.getElementById('setRemind30M').value
+  function getSafeVal(id, defaultVal) {
+    var el = document.getElementById(id);
+    return (el && el.value !== undefined) ? String(el.value).trim() : (defaultVal !== undefined ? defaultVal : '');
+  }
+
+  var payload = {
+    ORG_NAME: getSafeVal('setOrgName', 'เทศบาลเมืองสมุทรสงคราม'),
+    FRONTEND_URL: getSafeVal('setFrontendUrl', ''),
+    OPEN_HOUR: getSafeVal('setOpenHour', '07:00'),
+    CLOSE_HOUR: getSafeVal('setCloseHour', '20:00'),
+    KIOSK_MAX_UPCOMING: getSafeVal('setKioskMaxUpcoming', '5'),
+    SPREADSHEET_ID: getSafeVal('setSpreadsheetId', ''),
+    CALENDAR_ID: getSafeVal('setCalendarId', ''),
+    DRIVE_FOLDER_ID: getSafeVal('setDriveFolderId', ''),
+    CHAT_WEBHOOK_URL: getSafeVal('setChatWebhookUrl', ''),
+    ADMIN_NOTIFY_EMAIL: getSafeVal('setAdminNotifyEmail', ''),
+    REQUIRE_APPROVAL: getSafeVal('setRequireApproval', 'TRUE'),
+    ENABLE_CALENDAR_SYNC: getSafeVal('setCalendarSync', 'TRUE'),
+    ENABLE_CHAT_NOTIFY: getSafeVal('setChatNotify', 'FALSE'),
+    REMINDER_1D: getSafeVal('setRemind1D', 'TRUE'),
+    REMINDER_2H: getSafeVal('setRemind2H', 'TRUE'),
+    REMINDER_30M: getSafeVal('setRemind30M', 'TRUE')
   };
 
   callGas('saveAdminSettings', STATE.token, payload)
     .then(function() {
       STATE.settings = payload;
-      if (document.getElementById('orgNameLabel')) {
-        document.getElementById('orgNameLabel').textContent = payload.ORG_NAME;
-      }
+      var orgLabel = document.getElementById('orgNameLabel');
+      if (orgLabel) orgLabel.textContent = payload.ORG_NAME;
       updateTimeSlotOptions();
 
-      Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: 'การตั้งค่าระบบทั้งหมดถูกบันทึกลงฐานข้อมูลเรียบร้อยแล้ว', confirmButtonColor: '#0f4c81', timer: 2000 });
+      Swal.fire({
+        icon: 'success',
+        title: 'บันทึกสำเร็จ!',
+        text: 'การตั้งค่าระบบทั้งหมดถูกบันทึกลงฐานข้อมูลเรียบร้อยแล้ว',
+        confirmButtonColor: '#0f4c81',
+        timer: 2000
+      });
     })
-    .catch(function(err) { Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' }); })
+    .catch(function(err) {
+      Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
+    })
     .finally(function() { setLoading(false); });
 }
 
@@ -3106,6 +3118,7 @@ function removeUser(email) {
     }
   });
 }
+
 function loadAdminAudit() {
   callGas('getAuditLogs', STATE.token, 100)
     .then(function(res) {
@@ -3128,78 +3141,3 @@ function loadAdminAudit() {
     })
     .catch(function(err) { showToast(err.message, 'error'); });
 }
-// ตัวแปรเก็บข้อมูลดิบสำหรับ Live Search ในหน้าอนุมัติ
-  var windowApprovalCache = [];
-
-  function loadApprovalViewData() {
-    callGas('searchBookings', STATE.token, { status: 'รออนุมัติ' })
-      .then(function(res) {
-        var list = res.data || [];
-        windowApprovalCache = list; // เก็บใส่ Cache ชั่วคราวสำหรับกรอง
-        updatePendingBadgeCount(list.length);
-
-        // เติมตัวเลือกห้องประชุมใน Dropdown ตัวกรอง
-        var roomFilter = document.getElementById('approvalRoomFilter');
-        if (roomFilter && STATE.rooms) {
-          var curVal = roomFilter.value;
-          var rOpts = '<option value="">ทุกห้องประชุม</option>';
-          STATE.rooms.forEach(function(r) {
-            rOpts += '<option value="' + escapeHtml(r.RoomName) + '">' + escapeHtml(r.RoomName) + '</option>';
-          });
-          roomFilter.innerHTML = rOpts;
-          roomFilter.value = curVal;
-        }
-
-        renderApprovalTable(list);
-      })
-      .catch(function(err) { showToast(err.message, 'error'); });
-  }
-
-  function renderApprovalTable(list) {
-    var tbody = document.getElementById('standaloneApprovalBody');
-    if (!tbody) return;
-
-    if (list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;"><i class="bi bi-check-circle" style="font-size:24px; color:#16a34a;"></i><br>ไม่พบรายการจองที่รอการอนุมัติ</td></tr>';
-      return;
-    }
-
-    var html = '';
-    list.forEach(function(b) {
-      var thaiDate = formatDisplayDateThai(b.Date);
-      html += '<tr>' +
-        '<td><strong>' + escapeHtml(b.BookingID) + '</strong></td>' +
-        '<td>' + escapeHtml(thaiDate) + '<br><small>' + escapeHtml(b.StartTime) + '–' + escapeHtml(b.EndTime) + ' น.</small></td>' +
-        '<td>' + escapeHtml(b.RoomName) + '</td>' +
-        '<td>' + escapeHtml(b.Topic) + '</td>' +
-        '<td>' + escapeHtml(b.BookerName) + '<br><small style="color:var(--muted);">' + escapeHtml(b.Department) + '</small></td>' +
-        '<td>' + b.Participants + ' คน</td>' +
-        '<td style="white-space:nowrap;">' +
-          '<button class="btn btn-success btn-sm" onclick="approveFromView(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-check-lg"></i> อนุมัติ</button> ' +
-          '<button class="btn btn-danger btn-sm" onclick="rejectFromView(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-x-lg"></i> ไม่อนุมัติ</button> ' +
-          '<button class="btn btn-light btn-sm" onclick="openBookingDetailModal(\'' + escapeHtml(b.BookingID) + '\')"><i class="bi bi-eye"></i></button>' +
-        '</td></tr>';
-    });
-    tbody.innerHTML = html;
-  }
-
-  // ฟังก์ชันกรองข้อมูลแบบ Live Search ทันทีที่พิมพ์หรือเลือกห้อง
-  function filterApprovalTable() {
-    var query = (document.getElementById('approvalSearchQuery').value || '').toLowerCase().trim();
-    var roomNameFilter = (document.getElementById('approvalRoomFilter').value || '').trim();
-
-    var filtered = windowApprovalCache.filter(function(b) {
-      if (roomNameFilter && String(b.RoomName || '').trim() !== roomNameFilter) {
-        return false;
-      }
-      if (query) {
-        var textMatch = [
-          b.BookingID, b.Topic, b.BookerName, b.Department, b.RoomName, b.UserEmail
-        ].join(' ').toLowerCase();
-        if (textMatch.indexOf(query) === -1) return false;
-      }
-      return true;
-    });
-
-    renderApprovalTable(filtered);
-  }
