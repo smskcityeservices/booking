@@ -154,44 +154,37 @@ function callGas(fnName) {
     return res;
   });
 }
-/**
- * ฟังก์ชันบันทึกการตั้งค่าระบบ (Admin Settings)
- */
 function submitAdminSettings(e) {
   if (e && typeof e.preventDefault === 'function') {
     e.preventDefault();
   }
   setLoading(true, 'กำลังบันทึกการตั้งค่าระบบและโลโก้...');
 
-  // ฟังก์ชัน Safe Check ป้องกัน TypeError: Cannot read properties of null
   function getSafeVal(id, defaultVal) {
     var el = document.getElementById(id);
     if (!el || el.value === undefined || el.value === null) {
       return defaultVal !== undefined ? defaultVal : '';
     }
     var val = String(el.value).trim();
-    // ถ้าต้องการใช้ค่า default เมื่อช่องเป็นค่าว่าง ให้คืนค่า defaultVal
     return (val !== '') ? val : (defaultVal !== undefined ? defaultVal : '');
   }
 
+  // 🟢 ป้องกันโลโก้หาย: หากในช่อง input ว่าง ให้ดึงค่าโลโก้เก่าจาก STATE.settings มาใช้สำรอง
+  var currentLogoFallback = (STATE.settings && STATE.settings.ORG_LOGO_URL) ? STATE.settings.ORG_LOGO_URL : '';
+  var submittedLogoUrl = getSafeVal('setLogoUrl', currentLogoFallback);
+
   var payload = {
     ORG_NAME: getSafeVal('setOrgName', 'เทศบาลเมืองสมุทรสงคราม'),
-    ORG_LOGO_URL: getSafeVal('setLogoUrl', ''),
+    ORG_LOGO_URL: submittedLogoUrl, // ใช้ค่าสำรอง ป้องกันค่าว่างทับ
     FRONTEND_URL: getSafeVal('setFrontendUrl', ''),
     OPEN_HOUR: getSafeVal('setOpenHour', '07:00'),
     CLOSE_HOUR: getSafeVal('setCloseHour', '20:00'),
-    
-    // ตั้งค่า Kiosk Max Upcoming
     KIOSK_MAX_UPCOMING: getSafeVal('setKioskMaxUpcoming', '5'),
-
-    // ค่าพารามิเตอร์ขั้นสูง
     SPREADSHEET_ID: getSafeVal('setSpreadsheetId', ''),
     CALENDAR_ID: getSafeVal('setCalendarId', ''),
     DRIVE_FOLDER_ID: getSafeVal('setDriveFolderId', ''),
     CHAT_WEBHOOK_URL: getSafeVal('setChatWebhookUrl', ''),
     ADMIN_NOTIFY_EMAIL: getSafeVal('setAdminNotifyEmail', ''),
-
-    // สถานะเปิด/ปิดฟังก์ชัน
     REQUIRE_APPROVAL: getSafeVal('setRequireApproval', 'TRUE'),
     ENABLE_CALENDAR_SYNC: getSafeVal('setCalendarSync', 'TRUE'),
     ENABLE_CHAT_NOTIFY: getSafeVal('setChatNotify', 'FALSE'),
@@ -215,23 +208,16 @@ function submitAdminSettings(e) {
       var newLogoUrl = savedSettings.ORG_LOGO_URL || payload.ORG_LOGO_URL;
       STATE.settings.ORG_LOGO_URL = newLogoUrl;
 
-      // อัปเดตรูปภาพโลโก้ตามจุดต่างๆ ของระบบทันที
       if (typeof updateSystemLogos === 'function') {
         updateSystemLogos(newLogoUrl);
       }
       if (typeof pendingLogoData !== 'undefined') {
-        pendingLogoData = null; // เคลียร์แคชไฟล์ที่อัปโหลด
+        pendingLogoData = null;
       }
 
-      // อัปเดตชื่อหน่วยงานบนแถบเมนูด้านข้าง
       var orgLabel = document.getElementById('orgNameLabel');
       if (orgLabel) {
         orgLabel.textContent = payload.ORG_NAME;
-      }
-
-      // รีเฟรชช่วงเวลาทำการในฟอร์มจอง
-      if (typeof updateTimeSlotOptions === 'function') {
-        updateTimeSlotOptions();
       }
 
       Swal.fire({
