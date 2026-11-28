@@ -6,17 +6,17 @@
  * ============================================================================
  */
 
-// 1. Web App URL (/exec) จาก Google Apps Script
+// [สำคัญ] 1. นำ Web App URL (/exec) จาก Google Apps Script มาวางที่นี่
 var GAS_API_URL = "https://script.google.com/macros/s/AKfycbwqiWZF_yBsUa18YW4pVvFslXh1lq6A3n9S8wOJptwSQPKx_JH0eXS2tokk8XlmsdKMfw/exec";
 
-// 2. Google OAuth Client ID
+// [ทางเลือก] 2. ใส่ Google OAuth Client ID (จาก Google Cloud Console)
 var GOOGLE_CLIENT_ID = "146666427453-ml6lhhnemb9l3ok4urr5oia8lr883e7j.apps.googleusercontent.com";
 
 /* ==========================================================================
  * Global State & Default Layouts
  * ======================================================================== */
 var STATE = {
-  token: sessionStorage.getItem('MRB_AUTH_TOKEN') || '',
+  token: sessionStorage.getItem('MRB_AUTH_TOKEN') || '', // ปิด Auto-login ข้ามเบราว์เซอร์
   user: { authenticated: false, role: 'Guest', email: '', name: '', department: '', phone: '', googleLinked: false },
   settings: {},
   departments: [],
@@ -59,7 +59,7 @@ var DEFAULT_LAYOUTS = [
     name: "แบบโต๊ะประชุมกลาง (Boardroom)",
     desc: "โต๊ะประชุมตัวใหญ่ตัวเดียวล้อมรอบ เหมาะกับการประชุมคณะผู้บริหาร หัวหน้าส่วนราชการ",
     diagramUrl: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80",
-    photoUrl: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80"
+    photoUrl: "https://images.unsplash.com/photo-1517502884422-41eaead166d4?auto=format&fit=crop&w=800&q=80"
   },
   {
     id: "banquet",
@@ -71,15 +71,93 @@ var DEFAULT_LAYOUTS = [
 ];
 
 /* ==========================================================================
- * Utility & Safe Value Helpers
+ * Fetch API Bridge (เชื่อมต่อ Google Apps Script doPost API)
  * ======================================================================== */
-function getSafeVal(id, defaultVal) {
-  var el = document.getElementById(id);
-  return (el && el.value !== undefined && el.value !== null)
-    ? String(el.value).trim()
-    : (defaultVal !== undefined ? defaultVal : '');
+function callGas(fnName) {
+  if (!GAS_API_URL || GAS_API_URL.indexOf('http') !== 0) {
+    return Promise.reject(new Error('กรุณากำหนดค่า GAS_API_URL ในไฟล์ js/app.js ก่อนใช้งาน'));
+  }
+
+  var args = Array.prototype.slice.call(arguments, 1);
+  var reqToken = STATE.token || '';
+  var reqPayload = {};
+
+  if (fnName === 'loginWithCredentials') {
+    reqPayload = { email: args[0], passcode: args[1] };
+  } else if (fnName === 'loginWithGoogle') {
+    reqToken = '';
+    reqPayload = { idToken: (args[0] && args[0].idToken ? args[0].idToken : args[0]) };
+  } else if (fnName === 'toggleGoogleBinding') {
+    reqToken = args[0] || STATE.token;
+    reqPayload = {
+      idToken: (args[1] && args[1].idToken ? args[1].idToken : (args[1] || '')),
+      actionType: (args[1] && args[1].actionType ? args[1].actionType : 'link')
+    };
+  } else if (fnName === 'registerStaffAccount' || fnName === 'checkRoomAvailability') {
+    reqPayload = args[0] || {};
+  } else if (fnName === 'getRoomAvailabilityForDate') {
+    reqPayload = { date: args[0] };
+  } else if (fnName === 'getBookingById') {
+    reqPayload = { bookingId: args[0] };
+  } else if (fnName === 'getCalendarBookings') {
+    reqPayload = { roomId: args[0] || '' };
+  } else if (fnName === 'getRooms') {
+    reqPayload = { includeInactive: Boolean(args[0]) };
+  } else if (['createBooking', 'searchBookings', 'saveRoom', 'saveUser', 'saveAdminSettings', 'updateUserProfile'].indexOf(fnName) !== -1) {
+    reqToken = args[0] || STATE.token;
+    reqPayload = args[1] || {};
+  } else if (fnName === 'cancelBooking') {
+    reqToken = args[0] || STATE.token;
+    reqPayload = typeof args[1] === 'object' ? args[1] : { bookingId: args[1], cancelReason: args[2] || '' };
+  } else if (fnName === 'generateBookingPdf') {
+    reqToken = args[0] || STATE.token;
+    reqPayload = { bookingId: args[1] };
+  } else if (fnName === 'updateBookingStatus') {
+    reqToken = args[0] || STATE.token;
+    reqPayload = { bookingId: args[1], newStatus: args[2], remark: args[3] || '' };
+  } else if (fnName === 'deleteRoom') {
+    reqToken = args[0] || STATE.token;
+    reqPayload = { roomId: args[1] };
+  } else if (fnName === 'deleteUser') {
+    reqToken = args[0] || STATE.token;
+    reqPayload = { email: args[1] };
+  } else if (fnName === 'updateUserStatus') {
+    reqToken = args[0] || STATE.token;
+    reqPayload = { email: args[1], newStatus: args[2], reason: args[3] || '' };
+  } else if (fnName === 'getAuditLogs') {
+    reqToken = args[0] || STATE.token;
+    reqPayload = { limit: args[1] || 100 };
+  } else {
+    // getInitialAppData, logoutSession, getDashboardData, getUsersList, getAdminSettings, getNotificationBadges, getKioskRoomStatus
+    reqToken = args[0] || STATE.token;
+    reqPayload = {};
+  }
+
+  return fetch(GAS_API_URL, {
+    method: 'POST',
+    mode: 'cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: fnName, token: reqToken, payload: reqPayload })
+  })
+  .then(function(response) {
+    if (!response.ok) {
+      throw new Error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (HTTP ' + response.status + ')');
+    }
+    return response.json();
+  })
+  .then(function(res) {
+    if (res && res.success === false && res.code !== 'CONFLICT') {
+      var err = new Error(res.message || 'เกิดข้อผิดพลาดในการดำเนินการ');
+      err.code = res.code || 'ERROR';
+      throw err;
+    }
+    return res;
+  });
 }
 
+/* ==========================================================================
+ * SweetAlert2, Flatpickr (พ.ศ.) & Utility Helpers
+ * ======================================================================== */
 function formatFlatpickrThaiYear_(instance) {
   if (!instance || !instance.altInput) return;
   var val = instance.altInput.value;
@@ -224,186 +302,7 @@ function ensureTimeOptionExists(selectEl, timeVal) {
 }
 
 /* ==========================================================================
- * System Logo & Logo Upload Handler
- * ======================================================================== */
-var pendingLogoData = null;
-
-function updateSystemLogos(logoUrl) {
-  var hasLogo = Boolean(logoUrl && String(logoUrl).trim().indexOf('http') === 0);
-  var cleanUrl = hasLogo ? String(logoUrl).trim() : '';
-
-  // 1. Sidebar Brand
-  var sbImg = document.getElementById('sidebarLogoImg');
-  var sbIcon = document.getElementById('sidebarLogoIcon');
-  if (sbImg && sbIcon) {
-    if (hasLogo) {
-      sbImg.src = cleanUrl;
-      sbImg.style.display = 'inline-block';
-      sbIcon.style.display = 'none';
-    } else {
-      sbImg.style.display = 'none';
-      sbIcon.style.display = 'inline-block';
-    }
-  }
-
-  // 2. Kiosk Mode Header
-  var kImg = document.getElementById('kioskLogoImg');
-  if (kImg) {
-    if (hasLogo) {
-      kImg.src = cleanUrl;
-      kImg.style.display = 'block';
-    } else {
-      kImg.style.display = 'none';
-    }
-  }
-
-  // 3. Login Modal
-  var lImg = document.getElementById('loginLogoImg');
-  if (lImg) {
-    if (hasLogo) {
-      lImg.src = cleanUrl;
-      lImg.style.display = 'block';
-    } else {
-      lImg.style.display = 'none';
-    }
-  }
-
-  // 4. Setting Preview
-  var setPrev = document.getElementById('settingLogoPreview');
-  var setUrlInput = document.getElementById('setLogoUrl');
-  if (setPrev) {
-    if (hasLogo) {
-      setPrev.src = cleanUrl;
-      setPrev.style.display = 'block';
-    } else {
-      setPrev.style.display = 'none';
-    }
-  }
-  if (setUrlInput && !setUrlInput.value) {
-    setUrlInput.value = cleanUrl;
-  }
-}
-
-function handleLogoFileSelect(e) {
-  var file = e.target.files[0];
-  if (!file) return;
-
-  var reader = new FileReader();
-  reader.onload = function(ev) {
-    var img = new Image();
-    img.onload = function() {
-      var maxW = 400;
-      var scale = img.width > maxW ? (maxW / img.width) : 1;
-      var canvas = document.createElement('canvas');
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      var ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      var compressed = canvas.toDataURL(file.type || 'image/png', 0.9);
-
-      pendingLogoData = {
-        base64: compressed,
-        fileName: file.name,
-        mimeType: file.type || 'image/png'
-      };
-
-      var prev = document.getElementById('settingLogoPreview');
-      if (prev) {
-        prev.src = compressed;
-        prev.style.display = 'block';
-      }
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-/* ==========================================================================
- * Fetch API Bridge (doPost)
- * ======================================================================== */
-function callGas(fnName) {
-  if (!GAS_API_URL || GAS_API_URL.indexOf('http') !== 0) {
-    return Promise.reject(new Error('กรุณากำหนดค่า GAS_API_URL ในไฟล์ js/app.js ก่อนใช้งาน'));
-  }
-
-  var args = Array.prototype.slice.call(arguments, 1);
-  var reqToken = STATE.token || '';
-  var reqPayload = {};
-
-  if (fnName === 'loginWithCredentials') {
-    reqPayload = { email: args[0], passcode: args[1] };
-  } else if (fnName === 'loginWithGoogle') {
-    reqToken = '';
-    reqPayload = { idToken: (args[0] && args[0].idToken ? args[0].idToken : args[0]) };
-  } else if (fnName === 'toggleGoogleBinding') {
-    reqToken = args[0] || STATE.token;
-    reqPayload = {
-      idToken: (args[1] && args[1].idToken ? args[1].idToken : (args[1] || '')),
-      actionType: (args[1] && args[1].actionType ? args[1].actionType : 'link')
-    };
-  } else if (fnName === 'registerStaffAccount' || fnName === 'checkRoomAvailability') {
-    reqPayload = args[0] || {};
-  } else if (fnName === 'getRoomAvailabilityForDate') {
-    reqPayload = { date: args[0] };
-  } else if (fnName === 'getBookingById') {
-    reqPayload = { bookingId: args[0] };
-  } else if (fnName === 'getCalendarBookings') {
-    reqPayload = { roomId: args[0] || '' };
-  } else if (fnName === 'getRooms') {
-    reqPayload = { includeInactive: Boolean(args[0]) };
-  } else if (['createBooking', 'searchBookings', 'saveRoom', 'saveUser', 'saveAdminSettings', 'updateUserProfile'].indexOf(fnName) !== -1) {
-    reqToken = args[0] || STATE.token;
-    reqPayload = args[1] || {};
-  } else if (fnName === 'cancelBooking') {
-    reqToken = args[0] || STATE.token;
-    reqPayload = typeof args[1] === 'object' ? args[1] : { bookingId: args[1], cancelReason: args[2] || '' };
-  } else if (fnName === 'generateBookingPdf') {
-    reqToken = args[0] || STATE.token;
-    reqPayload = { bookingId: args[1] };
-  } else if (fnName === 'updateBookingStatus') {
-    reqToken = args[0] || STATE.token;
-    reqPayload = { bookingId: args[1], newStatus: args[2], remark: args[3] || '' };
-  } else if (fnName === 'deleteRoom') {
-    reqToken = args[0] || STATE.token;
-    reqPayload = { roomId: args[1] };
-  } else if (fnName === 'deleteUser') {
-    reqToken = args[0] || STATE.token;
-    reqPayload = { email: args[1] };
-  } else if (fnName === 'updateUserStatus') {
-    reqToken = args[0] || STATE.token;
-    reqPayload = { email: args[1], newStatus: args[2], reason: args[3] || '' };
-  } else if (fnName === 'getAuditLogs') {
-    reqToken = args[0] || STATE.token;
-    reqPayload = { limit: args[1] || 100 };
-  } else {
-    reqToken = args[0] || STATE.token;
-    reqPayload = {};
-  }
-
-  return fetch(GAS_API_URL, {
-    method: 'POST',
-    mode: 'cors',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: fnName, token: reqToken, payload: reqPayload })
-  })
-  .then(function(response) {
-    if (!response.ok) {
-      throw new Error('ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ (HTTP ' + response.status + ')');
-    }
-    return response.json();
-  })
-  .then(function(res) {
-    if (res && res.success === false && res.code !== 'CONFLICT') {
-      var err = new Error(res.message || 'เกิดข้อผิดพลาดในการดำเนินการ');
-      err.code = res.code || 'ERROR';
-      throw err;
-    }
-    return res;
-  });
-}
-
-/* ==========================================================================
- * Bootstrap & Initialization
+ * Bootstrap, Dropdowns & Navigation
  * ======================================================================== */
 document.addEventListener('DOMContentLoaded', function() {
   var urlParams = new URLSearchParams(window.location.search);
@@ -429,7 +328,7 @@ function bootstrapApp() {
     .then(function(res) {
       var data = res.data;
       STATE.user = data.user;
-      STATE.settings = data.settings || {};
+      STATE.settings = data.settings;
       STATE.departments = data.departments || [];
       STATE.rooms = data.rooms || [];
       STATE.layouts = (data.layouts && data.layouts.length > 0) ? data.layouts : DEFAULT_LAYOUTS;
@@ -438,10 +337,6 @@ function bootstrapApp() {
       var orgLabel = document.getElementById('orgNameLabel');
       if (orgLabel) {
         orgLabel.textContent = STATE.settings.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม';
-      }
-
-      if (typeof updateSystemLogos === 'function') {
-        updateSystemLogos(STATE.settings.ORG_LOGO_URL || '');
       }
 
       populateDropdowns();
@@ -459,14 +354,14 @@ function bootstrapApp() {
 
       if (typeof initModernThaiCalendar === 'function') {
         initModernThaiCalendar('availCheckDate', function(selectedDate) {
-          handleDateSelectionChange(selectedDate);
+          handleDateSelectionChange(selectedDate, 'availCheckDate');
         }, false);
 
         initModernThaiCalendar('bkDate', function(selectedDate) {
-          syncDateFromForm();
+          handleDateSelectionChange(selectedDate, 'bkDate');
         }, false);
 
-        initModernThaiCalendar('searchDate', function(selectedDate) {
+        initModernThaiCalendar('searchDate', function() {
           runBookingSearch();
         }, true);
       }
@@ -568,7 +463,6 @@ function navigateTo(view) {
     if (sidebarOverlay) sidebarOverlay.style.display = '';
     if (mainHeaderBar) mainHeaderBar.style.display = '';
     if (mainLayoutContent) mainLayoutContent.style.marginLeft = '';
-
     if (STATE.user && STATE.user.authenticated) {
       startNotificationPolling();
     }
@@ -600,8 +494,7 @@ function navigateTo(view) {
     mybookings: 'รายการจองของฉัน',
     stats: 'สถิติและค้นหารายการจอง',
     admin: 'จัดการระบบและอนุมัติการจอง',
-    kiosk: 'ระบบแสดงสถานะห้องประชุมหน้าห้อง (Kiosk)',
-    manual: 'คู่มือการใช้งานระบบ'
+    kiosk: 'ระบบแสดงสถานะห้องประชุมหน้าห้อง (Kiosk)'
   };
   var pageTitle = document.getElementById('pageTitle');
   if (pageTitle) pageTitle.textContent = titles[view] || 'ระบบจองห้องประชุม';
@@ -620,154 +513,7 @@ function navigateTo(view) {
 }
 
 /* ==========================================================================
- * Kiosk Mode Management
- * ======================================================================== */
-var kioskTimer = null;
-var kioskClockTimer = null;
-
-function startKioskMode() {
-  enterFullscreen();
-  updateKioskClock();
-  loadKioskData();
-
-  if (!kioskTimer) {
-    kioskTimer = setInterval(loadKioskData, 30000);
-  }
-  if (!kioskClockTimer) {
-    kioskClockTimer = setInterval(updateKioskClock, 1000);
-  }
-}
-
-function stopKioskMode() {
-  if (kioskTimer) {
-    clearInterval(kioskTimer);
-    kioskTimer = null;
-  }
-  if (kioskClockTimer) {
-    clearInterval(kioskClockTimer);
-    kioskClockTimer = null;
-  }
-  exitFullscreen();
-}
-
-function enterFullscreen() {
-  var elem = document.documentElement;
-  if (elem.requestFullscreen) {
-    elem.requestFullscreen().catch(function() {});
-  } else if (elem.webkitRequestFullscreen) {
-    elem.webkitRequestFullscreen();
-  } else if (elem.msRequestFullscreen) {
-    elem.msRequestFullscreen();
-  }
-}
-
-function exitFullscreen() {
-  if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
-    if (document.exitFullscreen) {
-      document.exitFullscreen().catch(function() {});
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    } else if (document.msExitFullscreen) {
-      document.msExitFullscreen();
-    }
-  }
-}
-
-function updateKioskClock() {
-  var now = new Date();
-  var clockEl = document.getElementById('kioskClock');
-  var dateEl = document.getElementById('kioskDate');
-  if (clockEl) clockEl.textContent = now.toTimeString().split(' ')[0];
-  if (dateEl) dateEl.textContent = formatDisplayDateThai(todayIso());
-}
-
-function loadKioskData() {
-  var kioskOrgEl = document.getElementById('kioskOrgName');
-  if (kioskOrgEl && STATE.settings && STATE.settings.ORG_NAME) {
-    kioskOrgEl.textContent = STATE.settings.ORG_NAME;
-  }
-  if (typeof updateSystemLogos === 'function' && STATE.settings) {
-    updateSystemLogos(STATE.settings.ORG_LOGO_URL || '');
-  }
-
-  callGas('getKioskRoomStatus')
-    .then(function(res) {
-      var data = res.data;
-      var grid = document.getElementById('kioskRoomGrid');
-      if (!grid) return;
-
-      var maxLimit = (data && data.maxUpcoming) ? data.maxUpcoming : 5;
-      var html = '';
-
-      data.rooms.forEach(function(r) {
-        var isBusy = (r.status === 'BUSY');
-        var isMaint = (r.status === 'MAINTENANCE');
-
-        var cardBg = isBusy ? '#7f1d1d' : (isMaint ? '#475569' : '#065f46');
-        var statusText = isBusy ? 'กำลังใช้งาน (BUSY)' : (isMaint ? 'ปิดปรับปรุง' : 'ห้องว่าง (AVAILABLE)');
-        var statusDot = isBusy ? '🔴' : (isMaint ? '🟡' : '🟢');
-
-        html += '<div style="background: #1e293b; border: 2px solid ' + (isBusy ? '#ef4444' : (isMaint ? '#94a3b8' : '#10b981')) + '; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); display: flex; flex-direction: column;">' +
-          '<div style="position: relative; height: 160px; background: #334155; flex-shrink: 0;">' +
-            '<img src="' + escapeHtml(r.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800') + '" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.75;">' +
-            '<div style="position: absolute; top: 12px; right: 12px; background: ' + cardBg + '; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">' +
-              statusDot + ' ' + statusText +
-            '</div>' +
-            '<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(15,23,42,0.95), transparent); padding: 15px 15px 8px 15px;">' +
-              '<h3 style="margin: 0; font-size: 19px; color: #fff; font-weight: 700;">' + escapeHtml(r.roomName) + '</h3>' +
-              '<div style="font-size: 12px; color: #94a3b8;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.building) + ' ' + escapeHtml(r.floor) + ' &bull; ความจุ ' + r.capacity + ' คน</div>' +
-            '</div>' +
-          '</div>' +
-          '<div style="padding: 16px; flex-grow: 1; display: flex; flex-direction: column;">';
-
-        if (isBusy && r.currentMeeting) {
-          var m = r.currentMeeting;
-          html += '<div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; flex-shrink: 0;">' +
-            '<div style="font-size: 11px; color: #f87171; font-weight: 700; text-transform: uppercase;">กำลังประชุมขณะนี้</div>' +
-            '<div style="font-size: 15px; font-weight: 700; color: #fff; margin: 2px 0;">' + escapeHtml(m.Topic) + '</div>' +
-            '<div style="font-size: 12.5px; color: #cbd5e1;"><i class="bi bi-clock"></i> ' + escapeHtml(m.StartTime) + ' - ' + escapeHtml(m.EndTime) + ' น.</div>' +
-            '<div style="font-size: 12px; color: #94a3b8; margin-top: 4px;"><i class="bi bi-person"></i> ผู้จอง: ' + escapeHtml(m.BookerName) + ' (' + escapeHtml(m.Department) + ')</div>' +
-          '</div>';
-        } else {
-          html += '<div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; color: #34d399; font-weight: 600; flex-shrink: 0;">' +
-            '<i class="bi bi-check-circle"></i> ห้องว่างพร้อมใช้งานในขณะนี้' +
-          '</div>';
-        }
-
-        html += '<div style="font-size: 12.5px; color: #94a3b8; border-top: 1px dashed #334155; padding-top: 10px; margin-top: auto;">' +
-          '<div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;"><i class="bi bi-calendar-event"></i> รายการจองถัดไป (สูงสุด ' + maxLimit + ' รายการ):</div>';
-
-        if (r.nextMeetings && r.nextMeetings.length > 0) {
-          html += '<div style="display: flex; flex-direction: column; gap: 6px;">';
-          r.nextMeetings.forEach(function(nm, idx) {
-            var dateBadge = (nm.Date !== data.date)
-              ? '<span style="background: rgba(56,189,248,0.2); color: #38bdf8; font-size: 10.5px; padding: 1px 6px; border-radius: 4px; margin-right: 4px;">' + formatDisplayDateThai(nm.Date) + '</span>'
-              : '';
-            html += '<div style="background: rgba(30, 41, 59, 0.7); padding: 6px 10px; border-radius: 6px; border: 1px solid #334155;">' +
-              '<div style="display: flex; justify-content: space-between; gap: 8px; color: #e2e8f0; font-weight: 600;">' +
-                '<span>' + (idx + 1) + '. ' + escapeHtml(nm.Topic) + '</span>' +
-                '<span style="color: #38bdf8; font-size: 12px; white-space: nowrap;">' + dateBadge + escapeHtml(nm.StartTime) + '-' + escapeHtml(nm.EndTime) + '</span>' +
-              '</div>' +
-              '<div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">ผู้จอง: ' + escapeHtml(nm.BookerName) + ' (' + escapeHtml(nm.Department) + ')</div>' +
-            '</div>';
-          });
-          html += '</div>';
-        } else {
-          html += '<div style="color: #64748b; font-style: italic;">ไม่มีรายการจองอื่นๆ เพิ่มเติม</div>';
-        }
-
-        html += '</div></div></div>';
-      });
-
-      grid.innerHTML = html;
-    })
-    .catch(function(err) {
-      console.error('Kiosk Load Error:', err);
-    });
-}
-
-/* ==========================================================================
- * Real-time Background Polling
+ * Real-time Background Polling & Booker Status Notifications
  * ======================================================================== */
 var POLL_INTERVAL_MS = 15000;
 
@@ -808,6 +554,7 @@ document.addEventListener('visibilitychange', function() {
 function fetchNotificationBadgesSilent(isInitial) {
   if (!STATE.user.authenticated) return;
 
+  // 1. สำหรับ Admin / Approver: อัปเดต Badge คำขอรออนุมัติและผู้สมัครใหม่
   if (['Admin', 'Approver'].indexOf(STATE.user.role) !== -1) {
     callGas('getNotificationBadges', STATE.token)
       .then(function(res) {
@@ -896,6 +643,7 @@ function fetchNotificationBadgesSilent(isInitial) {
       .catch(function() {});
   }
 
+  // 2. สำหรับบุคลากรทุกคน: อัปเดต Badge รายการจองของฉัน (นับเฉพาะ "รออนุมัติ") และตรวจจับผลอนุมัติ
   callGas('searchBookings', STATE.token, { myOnly: true, userEmail: STATE.user.email })
     .then(function(res) {
       var list = res.data || [];
@@ -1024,6 +772,150 @@ function checkBookerStatusUpdates(bookingsList) {
       if (typeof loadMyBookings === 'function') loadMyBookings();
     });
   }
+}
+
+/* ==========================================================================
+ * Kiosk Mode Management (Full Screen & Auto Refresh)
+ * ======================================================================== */
+var kioskTimer = null;
+var kioskClockTimer = null;
+
+function startKioskMode() {
+  enterFullscreen();
+  updateKioskClock();
+  loadKioskData();
+
+  if (!kioskTimer) {
+    kioskTimer = setInterval(loadKioskData, 30000);
+  }
+  if (!kioskClockTimer) {
+    kioskClockTimer = setInterval(updateKioskClock, 1000);
+  }
+}
+
+function stopKioskMode() {
+  if (kioskTimer) {
+    clearInterval(kioskTimer);
+    kioskTimer = null;
+  }
+  if (kioskClockTimer) {
+    clearInterval(kioskClockTimer);
+    kioskClockTimer = null;
+  }
+  exitFullscreen();
+}
+
+function enterFullscreen() {
+  var elem = document.documentElement;
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen().catch(function() {});
+  } else if (elem.webkitRequestFullscreen) {
+    elem.webkitRequestFullscreen();
+  } else if (elem.msRequestFullscreen) {
+    elem.msRequestFullscreen();
+  }
+}
+
+function exitFullscreen() {
+  if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+    if (document.exitFullscreen) {
+      document.exitFullscreen().catch(function() {});
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
+    }
+  }
+}
+
+function updateKioskClock() {
+  var now = new Date();
+  var clockEl = document.getElementById('kioskClock');
+  var dateEl = document.getElementById('kioskDate');
+  if (clockEl) clockEl.textContent = now.toTimeString().split(' ')[0];
+  if (dateEl) dateEl.textContent = formatDisplayDateThai(todayIso());
+}
+
+function loadKioskData() {
+  var kioskOrgEl = document.getElementById('kioskOrgName');
+  if (kioskOrgEl && STATE.settings && STATE.settings.ORG_NAME) {
+    kioskOrgEl.textContent = STATE.settings.ORG_NAME;
+  }
+
+  callGas('getKioskRoomStatus')
+    .then(function(res) {
+      var data = res.data;
+      var grid = document.getElementById('kioskRoomGrid');
+      if (!grid) return;
+
+      var maxLimit = (data && data.maxUpcoming) ? data.maxUpcoming : 5;
+      var html = '';
+
+      data.rooms.forEach(function(r) {
+        var isBusy = (r.status === 'BUSY');
+        var isMaint = (r.status === 'MAINTENANCE');
+
+        var cardBg = isBusy ? '#7f1d1d' : (isMaint ? '#475569' : '#065f46');
+        var statusText = isBusy ? 'กำลังใช้งาน (BUSY)' : (isMaint ? 'ปิดปรับปรุง' : 'ห้องว่าง (AVAILABLE)');
+        var statusDot = isBusy ? '🔴' : (isMaint ? '🟡' : '🟢');
+
+        html += '<div style="background: #1e293b; border: 2px solid ' + (isBusy ? '#ef4444' : (isMaint ? '#94a3b8' : '#10b981')) + '; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); display: flex; flex-direction: column;">' +
+          '<div style="position: relative; height: 150px; background: #334155; flex-shrink: 0;">' +
+            '<img src="' + escapeHtml(r.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800') + '" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.75;">' +
+            '<div style="position: absolute; top: 12px; right: 12px; background: ' + cardBg + '; color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);">' +
+              statusDot + ' ' + statusText +
+            '</div>' +
+            '<div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(15,23,42,0.95), transparent); padding: 15px 15px 8px 15px;">' +
+              '<h3 style="margin: 0; font-size: 19px; color: #fff; font-weight: 700;">' + escapeHtml(r.roomName) + '</h3>' +
+              '<div style="font-size: 12px; color: #94a3b8;"><i class="bi bi-geo-alt"></i> ' + escapeHtml(r.building) + ' ' + escapeHtml(r.floor) + ' &bull; ความจุ ' + r.capacity + ' คน</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="padding: 16px; flex-grow: 1; display: flex; flex-direction: column;">';
+
+        if (isBusy && r.currentMeeting) {
+          var m = r.currentMeeting;
+          html += '<div style="background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; flex-shrink: 0;">' +
+            '<div style="font-size: 11px; color: #f87171; font-weight: 700; text-transform: uppercase;">กำลังประชุมขณะนี้</div>' +
+            '<div style="font-size: 15px; font-weight: 700; color: #fff; margin: 2px 0;">' + escapeHtml(m.Topic) + '</div>' +
+            '<div style="font-size: 12.5px; color: #cbd5e1;"><i class="bi bi-clock"></i> ' + escapeHtml(m.StartTime) + ' - ' + escapeHtml(m.EndTime) + ' น.</div>' +
+            '<div style="font-size: 12px; color: #94a3b8; margin-top: 4px;"><i class="bi bi-person"></i> ผู้จอง: ' + escapeHtml(m.BookerName) + ' (' + escapeHtml(m.Department) + ')</div>' +
+          '</div>';
+        } else {
+          html += '<div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 10px; border-radius: 0 8px 8px 0; margin-bottom: 12px; color: #34d399; font-weight: 600; flex-shrink: 0;">' +
+            '<i class="bi bi-check-circle"></i> ห้องว่างพร้อมใช้งานในขณะนี้' +
+          '</div>';
+        }
+
+        html += '<div style="font-size: 12.5px; color: #94a3b8; border-top: 1px dashed #334155; padding-top: 10px; margin-top: auto;">' +
+          '<div style="font-weight: 700; color: #38bdf8; margin-bottom: 6px;"><i class="bi bi-calendar-event"></i> รายการจองถัดไป (สูงสุด ' + maxLimit + ' รายการ):</div>';
+
+        if (r.nextMeetings && r.nextMeetings.length > 0) {
+          html += '<div style="display: flex; flex-direction: column; gap: 6px;">';
+          r.nextMeetings.forEach(function(nm, idx) {
+            var dateBadge = (nm.Date !== data.date)
+              ? '<span style="background: rgba(56,189,248,0.2); color: #38bdf8; font-size: 10.5px; padding: 1px 6px; border-radius: 4px; margin-right: 4px;">' + formatDisplayDateThai(nm.Date) + '</span>'
+              : '';
+            html += '<div style="background: rgba(30, 41, 59, 0.7); padding: 6px 10px; border-radius: 6px; border: 1px solid #334155;">' +
+              '<div style="display: flex; justify-content: space-between; gap: 8px; color: #e2e8f0; font-weight: 600;">' +
+                '<span>' + (idx + 1) + '. ' + escapeHtml(nm.Topic) + '</span>' +
+                '<span style="color: #38bdf8; font-size: 12px; white-space: nowrap;">' + dateBadge + escapeHtml(nm.StartTime) + '-' + escapeHtml(nm.EndTime) + '</span>' +
+              '</div>' +
+              '<div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">ผู้จอง: ' + escapeHtml(nm.BookerName) + ' (' + escapeHtml(nm.Department) + ')</div>' +
+            '</div>';
+          });
+          html += '</div>';
+        } else {
+          html += '<div style="color: #64748b; font-style: italic;">ไม่มีรายการจองอื่นๆ เพิ่มเติม</div>';
+        }
+
+        html += '</div></div></div>';
+      });
+
+      grid.innerHTML = html;
+    })
+    .catch(function(err) {
+      console.error('Kiosk Load Error:', err);
+    });
 }
 
 /* ==========================================================================
@@ -1189,8 +1081,7 @@ function updateDurationBadge() {
     badge.style.borderColor = '#fca5a5';
     return;
   }
-  var h = Math.floor(diff / 60);
-  var m = diff % 60;
+  var h = Math.floor(diff / 60), m = diff % 60;
   var str = (h > 0 ? h + ' ชม. ' : '') + (m > 0 ? m + ' นาที' : '');
   badge.innerHTML = '<i class="bi bi-hourglass-split"></i> รวม ' + str;
   badge.style.background = '#f0fdf4';
@@ -1325,7 +1216,7 @@ function checkAvailabilityClick() { performLiveAvailabilityCheck(); }
 function applySuggestedTime(s, e) { applyTimePreset(s, e); }
 
 /* ==========================================================================
- * Date Synchronization & Room Availability Grid
+ * Date Synchronization & Availability Flow
  * ======================================================================== */
 function handleDateSelectionChange(selectedDate) {
   if (!selectedDate) return;
@@ -1771,6 +1662,7 @@ function loadMyBookings() {
     .then(function(res) {
       var list = res.data || [];
 
+      // นับเฉพาะรายการจองที่อยู่ในสถานะ "รออนุมัติ" เท่านั้น เพื่อแสดง Badge สีแดง
       var pendingCount = list.filter(function(x) {
         var st = x.EffectiveStatus || x.Status;
         return st === 'รออนุมัติ';
@@ -1977,7 +1869,7 @@ function downloadBookingPdf(bookingId) {
 }
 
 /* ==========================================================================
- * Calendar View
+ * Calendar View (Month / Week / Day / List View)
  * ======================================================================== */
 function loadCalendarEvents() {
   var filterEl = document.getElementById('calendarRoomFilter');
@@ -2064,7 +1956,7 @@ function loadCalendarEvents() {
 }
 
 /* ==========================================================================
- * Authentication, GIS & Profile Management
+ * Authentication, Google Identity Services (GIS) & Profile Management
  * ======================================================================== */
 function openLoginModal() {
   openModal('loginModal');
@@ -2450,7 +2342,7 @@ function unlinkGoogleClick() {
 }
 
 /* ==========================================================================
- * Dashboard Charts & Quick Approval
+ * Dashboard, Charts & Quick Dashboard Approval
  * ======================================================================== */
 function loadDashboard() {
   callGas('getDashboardData', STATE.token)
@@ -2612,7 +2504,7 @@ function rejectFromDashboard(bookingId) {
 }
 
 /* ==========================================================================
- * Standalone Approval View (Approver & Admin)
+ * Standalone Approval View with Live Search & Filter (Approver & Admin)
  * ======================================================================== */
 var windowApprovalCache = [];
 
@@ -2728,7 +2620,7 @@ function rejectFromView(bookingId) {
 }
 
 /* ==========================================================================
- * Admin Management Tabs & Settings
+ * Admin Management (6 Tabs: Approval, All Bookings, Rooms, Users, Settings, Audit)
  * ======================================================================== */
 function loadAdminView() {
   var isAdmin = (STATE.user.role === 'Admin');
@@ -2772,18 +2664,13 @@ function loadAdminSettings() {
       var s = res.data || {};
       function setSafeVal(id, val) {
         var el = document.getElementById(id);
-        if (el) el.value = (val !== undefined && val !== null) ? val : '';
+        if (el) el.value = val;
       }
 
-      setSafeVal('setOrgName', s.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม');
+      setSafeVal('setOrgName', s.ORG_NAME || '');
       setSafeVal('setFrontendUrl', s.FRONTEND_URL || '');
       setSafeVal('setOpenHour', extractCleanTime(s.OPEN_HOUR, '07:00'));
       setSafeVal('setCloseHour', extractCleanTime(s.CLOSE_HOUR, '20:00'));
-      setSafeVal('setLogoUrl', s.ORG_LOGO_URL || '');
-      if (typeof updateSystemLogos === 'function') {
-        updateSystemLogos(s.ORG_LOGO_URL || '');
-      }
-
       setSafeVal('setKioskMaxUpcoming', s.KIOSK_MAX_UPCOMING || '5');
 
       setSafeVal('setSpreadsheetId', s.SPREADSHEET_ID || '');
@@ -2794,7 +2681,7 @@ function loadAdminSettings() {
 
       setSelectValue('setRequireApproval', s.REQUIRE_APPROVAL, 'TRUE');
       setSelectValue('setCalendarSync', s.ENABLE_CALENDAR_SYNC, 'TRUE');
-      setSelectValue('setChatNotify', s.ENABLE_CHAT_NOTIFY, 'FALSE');
+      setSelectValue('setChatNotify', s.ENABLE_CHAT_NOTIFY, 'TRUE');
       setSelectValue('setRemind1D', s.REMINDER_1D, 'TRUE');
       setSelectValue('setRemind2H', s.REMINDER_2H, 'TRUE');
       setSelectValue('setRemind30M', s.REMINDER_30M, 'TRUE');
@@ -2811,11 +2698,15 @@ function setSelectValue(elementId, val, defaultVal) {
 
 function submitAdminSettings(e) {
   e.preventDefault();
-  setLoading(true, 'กำลังบันทึกการตั้งค่าระบบและโลโก้...');
+  setLoading(true, 'กำลังบันทึกการตั้งค่าระบบ...');
+
+  function getSafeVal(id, defaultVal) {
+    var el = document.getElementById(id);
+    return (el && el.value !== undefined) ? String(el.value).trim() : (defaultVal !== undefined ? defaultVal : '');
+  }
 
   var payload = {
     ORG_NAME: getSafeVal('setOrgName', 'เทศบาลเมืองสมุทรสงคราม'),
-    ORG_LOGO_URL: getSafeVal('setLogoUrl', ''),
     FRONTEND_URL: getSafeVal('setFrontendUrl', ''),
     OPEN_HOUR: getSafeVal('setOpenHour', '07:00'),
     CLOSE_HOUR: getSafeVal('setCloseHour', '20:00'),
@@ -2833,42 +2724,19 @@ function submitAdminSettings(e) {
     REMINDER_30M: getSafeVal('setRemind30M', 'TRUE')
   };
 
-  if (typeof pendingLogoData !== 'undefined' && pendingLogoData) {
-    payload.logoBase64 = pendingLogoData.base64;
-    payload.logoFileName = pendingLogoData.fileName;
-    payload.logoMimeType = pendingLogoData.mimeType;
-  }
-
   callGas('saveAdminSettings', STATE.token, payload)
-    .then(function(res) {
-      var savedSettings = (res && res.data) ? res.data : payload;
-      STATE.settings = savedSettings;
-
-      var newLogoUrl = savedSettings.ORG_LOGO_URL || payload.ORG_LOGO_URL;
-      STATE.settings.ORG_LOGO_URL = newLogoUrl;
-
-      if (typeof updateSystemLogos === 'function') {
-        updateSystemLogos(newLogoUrl);
-      }
-      if (typeof pendingLogoData !== 'undefined') {
-        pendingLogoData = null;
-      }
-
+    .then(function() {
+      STATE.settings = payload;
       var orgLabel = document.getElementById('orgNameLabel');
-      if (orgLabel) {
-        orgLabel.textContent = payload.ORG_NAME;
-      }
-      if (typeof updateTimeSlotOptions === 'function') {
-        updateTimeSlotOptions();
-      }
+      if (orgLabel) orgLabel.textContent = payload.ORG_NAME;
+      updateTimeSlotOptions();
 
       Swal.fire({
         icon: 'success',
         title: 'บันทึกสำเร็จ!',
-        text: 'การตั้งค่าระบบและโลโก้เทศบาลถูกบันทึกเรียบร้อยแล้ว',
+        text: 'การตั้งค่าระบบทั้งหมดถูกบันทึกลงฐานข้อมูลเรียบร้อยแล้ว',
         confirmButtonColor: '#0f4c81',
-        timer: 2000,
-        timerProgressBar: true
+        timer: 2000
       });
     })
     .catch(function(err) {
