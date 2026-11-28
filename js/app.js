@@ -321,6 +321,9 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+/**
+ * เริ่มต้นระบบและโหลดข้อมูลตั้งต้นทั้งหมดเข้าสู่แอปพลิเคชัน
+ */
 function bootstrapApp() {
   setLoading(true, 'กำลังเชื่อมต่อข้อมูลระบบ...');
 
@@ -328,22 +331,33 @@ function bootstrapApp() {
     .then(function(res) {
       var data = res.data;
       STATE.user = data.user;
-      STATE.settings = data.settings;
+      STATE.settings = data.settings || {};
       STATE.departments = data.departments || [];
       STATE.rooms = data.rooms || [];
       STATE.layouts = (data.layouts && data.layouts.length > 0) ? data.layouts : DEFAULT_LAYOUTS;
       STATE.webAppUrl = data.webAppUrl || '';
 
+      // 1. อัปเดตชื่อหน่วยงานบนหัวแถบเมนู
       var orgLabel = document.getElementById('orgNameLabel');
       if (orgLabel) {
         orgLabel.textContent = STATE.settings.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม';
       }
-     updateSystemLogos(STATE.settings.ORG_LOGO_URL);
-      
+
+      // 2. 🟢 แสดงผลรูปภาพโลโก้ทุกจุดทันทีตั้งแต่โหลดหน้าเว็บ (ป้องกันรูปรอยัลตี้/ไอคอนทับเมื่อรีเฟรช)
+      if (typeof updateSystemLogos === 'function') {
+        updateSystemLogos(STATE.settings.ORG_LOGO_URL || '');
+      }
+
+      // 3. เติมตัวเลือกใน Dropdowns ทั้งหมด
       populateDropdowns();
+
+      // 4. เรนเดอร์การ์ดรูปแบบการจัดโต๊ะเก้าอี้ห้องประชุม
       renderBookingLayoutCards();
+
+      // 5. อัปเดตสถานะผู้ใช้งาน (แสดง/ซ่อน เมนูตามสิทธิ์)
       updateAuthUI();
 
+      // 6. ตั้งค่าวันที่เริ่มต้นสำหรับช่องเลือกวัน (วันนี้เป็นต้นไป)
       var today = todayIso();
       ['availCheckDate', 'bkDate', 'searchDate'].forEach(function(id) {
         var input = document.getElementById(id);
@@ -353,27 +367,36 @@ function bootstrapApp() {
         }
       });
 
+      // 7. เปิดใช้งานปฏิทิน Flatpickr สไตล์ Modern (ภาษาไทยและปี พ.ศ.)
       if (typeof initModernThaiCalendar === 'function') {
+        // ปฏิทินเช็คห้องว่างหน้าจอง (ด้านบน)
         initModernThaiCalendar('availCheckDate', function(selectedDate) {
           handleDateSelectionChange(selectedDate, 'availCheckDate');
         }, false);
 
+        // ปฏิทินวันที่ในฟอร์มจอง (ด้านล่าง)
         initModernThaiCalendar('bkDate', function(selectedDate) {
-          handleDateSelectionChange(selectedDate, 'bkDate');
+          syncDateFromForm();
         }, false);
 
-        initModernThaiCalendar('searchDate', function() {
+        // ปฏิทินค้นหาในหน้าสถิติและค้นหา (view-stats)
+        initModernThaiCalendar('searchDate', function(selectedDate) {
           runBookingSearch();
         }, true);
       }
 
+      // 8. สร้างตัวเลือกเวลาเริ่มต้น-สิ้นสุด (กรองเวลาในอดีตทิ้งอัตโนมัติหากเป็นวันนี้)
       updateTimeSlotOptions();
+
+      // 9. เริ่มต้นระบบ Polling ตรวจสอบตัวเลข Badge แจ้งเตือน Real-time เบื้องหลัง
       startNotificationPolling();
 
+      // 10. เริ่มต้นปุ่มเข้าสู่ระบบด้วย Google Account (GIS)
       if (typeof initGoogleIdentityServices === 'function') {
         setTimeout(initGoogleIdentityServices, 300);
       }
 
+      // 11. นำทางไปยังหน้าเป้าหมายเริ่มต้น (หรือเปิดรายละเอียดจาก QR Code)
       var targetView = (window.APP_BOOT && window.APP_BOOT.initialPage && document.getElementById('view-' + window.APP_BOOT.initialPage))
         ? window.APP_BOOT.initialPage : 'dashboard';
       navigateTo(targetView);
@@ -2717,61 +2740,10 @@ function submitAdminSettings(e) {
   setLoading(true, 'กำลังบันทึกการตั้งค่าระบบและโลโก้...');
 
   function getSafeVal(id, defaultVal) {
-    var el = document.getElementById(id);
-    return (el && el.value !== undefined) ? String(el.value).trim() : (defaultVal !== undefined ? defaultVal : '');
-  }
-
-  var payload = {
-    ORG_NAME: getSafeVal('setOrgName', 'เทศบาลเมืองสมุทรสงคราม'),
-    ORG_LOGO_URL: getSafeVal('setLogoUrl', ''), // 🟢 ส่ง URL โลโก้
-    FRONTEND_URL: getSafeVal('setFrontendUrl', ''),
-    OPEN_HOUR: getSafeVal('setOpenHour', '07:00'),
-    CLOSE_HOUR: getSafeVal('setCloseHour', '20:00'),
-    KIOSK_MAX_UPCOMING: getSafeVal('setKioskMaxUpcoming', '5'),
-    SPREADSHEET_ID: getSafeVal('setSpreadsheetId', ''),
-    CALENDAR_ID: getSafeVal('setCalendarId', ''),
-    DRIVE_FOLDER_ID: getSafeVal('setDriveFolderId', ''),
-    CHAT_WEBHOOK_URL: getSafeVal('setChatWebhookUrl', ''),
-    ADMIN_NOTIFY_EMAIL: getSafeVal('setAdminNotifyEmail', ''),
-    REQUIRE_APPROVAL: getSafeVal('setRequireApproval', 'TRUE'),
-    ENABLE_CALENDAR_SYNC: getSafeVal('setCalendarSync', 'TRUE'),
-    ENABLE_CHAT_NOTIFY: getSafeVal('setChatNotify', 'FALSE'),
-    REMINDER_1D: getSafeVal('setRemind1D', 'TRUE'),
-    REMINDER_2H: getSafeVal('setRemind2H', 'TRUE'),
-    REMINDER_30M: getSafeVal('setRemind30M', 'TRUE')
-  };
-
-  // 🟢 แนบไฟล์รูปภาพที่อัปโหลด (ถ้ามี)
-  if (pendingLogoData) {
-    payload.logoBase64 = pendingLogoData.base64;
-    payload.logoFileName = pendingLogoData.fileName;
-    payload.logoMimeType = pendingLogoData.mimeType;
-  }
-
-  callGas('saveAdminSettings', STATE.token, payload)
-    .then(function(res) {
-      STATE.settings = res.data || payload;
-      var newLogo = (res.data && res.data.ORG_LOGO_URL) ? res.data.ORG_LOGO_URL : payload.ORG_LOGO_URL;
-      STATE.settings.ORG_LOGO_URL = newLogo;
-      
-      updateSystemLogos(newLogo);
-      pendingLogoData = null; // เคลียร์ตัวแปรค้าง
-
-      var orgLabel = document.getElementById('orgNameLabel');
-      if (orgLabel) orgLabel.textContent = payload.ORG_NAME;
-
-      Swal.fire({
-        icon: 'success',
-        title: 'บันทึกสำเร็จ!',
-        text: 'บันทึกการตั้งค่าระบบและโลโก้เทศบาลเรียบร้อยแล้ว',
-        confirmButtonColor: '#0f4c81',
-        timer: 2000
-      });
-    })
-    .catch(function(err) {
-      Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
-    })
-    .finally(function() { setLoading(false); });
+  var el = document.getElementById(id);
+  return (el && el.value !== undefined && el.value !== null) 
+    ? String(el.value).trim() 
+    : (defaultVal !== undefined ? defaultVal : '');
 }
 
 function loadAdminBookings() {
@@ -3151,10 +3123,10 @@ function removeUser(email) {
  * อัปเดตและแสดงรูปภาพโลโก้ในจุดต่างๆ ของระบบ
  */
 function updateSystemLogos(logoUrl) {
-  var hasLogo = Boolean(logoUrl && logoUrl.trim().indexOf('http') === 0);
-  var cleanUrl = hasLogo ? logoUrl.trim() : '';
+  var hasLogo = Boolean(logoUrl && String(logoUrl).trim().indexOf('http') === 0);
+  var cleanUrl = hasLogo ? String(logoUrl).trim() : '';
 
-  // 1. Sidebar Brand
+  // 1. โลโก้แถบ Sidebar
   var sbImg = document.getElementById('sidebarLogoImg');
   var sbIcon = document.getElementById('sidebarLogoIcon');
   if (sbImg && sbIcon) {
@@ -3168,7 +3140,7 @@ function updateSystemLogos(logoUrl) {
     }
   }
 
-  // 2. Kiosk Mode Header
+  // 2. โลโก้หน้าจอ Kiosk Mode
   var kImg = document.getElementById('kioskLogoImg');
   if (kImg) {
     if (hasLogo) {
@@ -3179,7 +3151,7 @@ function updateSystemLogos(logoUrl) {
     }
   }
 
-  // 3. Login Modal
+  // 3. โลโก้ในหน้าต่าง Login Modal
   var lImg = document.getElementById('loginLogoImg');
   if (lImg) {
     if (hasLogo) {
@@ -3190,7 +3162,7 @@ function updateSystemLogos(logoUrl) {
     }
   }
 
-  // 4. Setting Preview
+  // 4. พรีวิวในหน้าต่าง Setting
   var setPrev = document.getElementById('settingLogoPreview');
   var setUrlInput = document.getElementById('setLogoUrl');
   if (setPrev) {
