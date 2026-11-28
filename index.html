@@ -165,9 +165,11 @@
 
   <!-- Sidebar Navigation -->
   <div class="sidebar" id="sidebar">
-    <div class="sidebar-brand">
-      <i class="bi bi-building-fill-check"></i>
-      <span id="orgNameLabel">เทศบาลเมืองสมุทรสงคราม</span>
+   <div class="sidebar-brand" style="display: flex; align-items: center; gap: 12px; padding: 18px 20px;">
+      <!-- รูปภาพโลโก้ (ถ้าไม่มีจะใช้ไอคอนอาคารเป็นค่าเริ่มต้น) -->
+      <img id="sidebarLogoImg" src="" alt="Logo" style="display: none; width: 38px; height: 38px; object-fit: contain; border-radius: 6px; background: #fff; padding: 2px;">
+      <i id="sidebarLogoIcon" class="bi bi-building-fill-check" style="font-size: 24px;"></i>
+      <span id="orgNameLabel" style="line-height: 1.3;">เทศบาลเมืองสมุทรสงคราม</span>
     </div>
     <div class="sidebar-menu">
       <button type="button" class="nav-item active" data-view="dashboard" onclick="navigateTo('dashboard')">
@@ -603,6 +605,18 @@
             <div class="card-header"><div class="card-title"><i class="bi bi-sliders"></i> ตั้งค่าพารามิเตอร์ระบบ</div></div>
             <form onsubmit="submitAdminSettings(event)">
               <div class="form-group mb-3"><label>ชื่อหน่วยงาน / องค์กร</label><input type="text" id="setOrgName" class="form-control" required></div>
+              <!-- ฟิลด์อัปโหลดโลโก้เทศบาล -->
+              <div class="form-group mb-3" style="background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                <label style="font-weight: 700; color: var(--primary);"><i class="bi bi-image"></i> โลโก้เทศบาล / ตราสัญลักษณ์หน่วยงาน</label>
+                <div style="display: flex; align-items: center; gap: 15px; margin-top: 8px;">
+                  <img id="settingLogoPreview" src="" alt="Logo Preview" style="width: 60px; height: 60px; object-fit: contain; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; padding: 4px; display: none;">
+                  <div style="flex-grow: 1;">
+                    <input type="file" id="setLogoFile" class="form-control mb-2" accept="image/*" onchange="handleLogoFileSelect(event)">
+                    <input type="text" id="setLogoUrl" class="form-control" placeholder="หรือระบุ URL รูปภาพโลโก้โดยตรง (https://...)">
+                  </div>
+                </div>
+                <small class="text-muted">แนะนำเป็นไฟล์ภาพโปร่งใส PNG หรือ JPG ขนาดประมาณ 200x200 พิกเซล</small>
+              </div>
               <div class="form-group mb-3"><label>URL เว็บไซต์หลัก (Frontend URL บน GitHub Pages)</label><input type="url" id="setFrontendUrl" class="form-control" placeholder="https://smskcityservices.github.io/..."></div>
               <div class="form-grid">
                 <div class="form-group"><label>เวลาเปิดทำการ</label><input type="time" id="setOpenHour" class="form-control" required></div>
@@ -758,9 +772,12 @@
           
           <!-- Kiosk Header -->
           <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-bottom: 25px;">
-            <div>
-              <h1 id="kioskOrgName" style="font-size: 26px; font-weight: 700; margin: 0; color: #38bdf8;">เทศบาลเมืองสมุทรสงคราม</h1>
-              <p style="font-size: 14px; color: #94a3b8; margin: 4px 0 0 0;"><i class="bi bi-display"></i> ระบบแสดงสถานะห้องประชุมออนไลน์ (Kiosk Mode)</p>
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <!-- โลโก้ในหน้า Kiosk -->
+              <img id="kioskLogoImg" src="" alt="Logo" style="display: none; width: 55px; height: 55px; object-fit: contain; border-radius: 8px; background: #fff; padding: 4px;">
+              <div>
+                <h1 id="kioskOrgName" style="font-size: 26px; font-weight: 700; margin: 0; color: #38bdf8;">เทศบาลเมืองสมุทรสงคราม</h1>
+                <p style="font-size: 14px; color: #94a3b8; margin: 4px 0 0 0;"><i class="bi bi-display"></i> ระบบแสดงสถานะห้องประชุมออนไลน์ (Kiosk Mode)</p>
             </div>
             <div style="text-align: right; display: flex; align-items: center; gap: 20px;">
               <div>
@@ -790,6 +807,9 @@
   <!-- Modal: Login / Register -->
   <div class="modal-backdrop" id="loginModal">
     <div class="modal-box" style="max-width: 440px;">
+      <div style="text-align: center; margin-bottom: 12px;">
+        <img id="loginLogoImg" src="" alt="Logo" style="display: none; width: 64px; height: 64px; object-fit: contain; margin: 0 auto 8px auto;">
+      </div>
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h3 style="font-size: 18px; color: var(--primary); font-weight: 700;"><i class="bi bi-lock"></i> เข้าสู่ระบบบุคลากร / ลงทะเบียน</h3>
         <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('loginModal')"><i class="bi bi-x-lg"></i></button>
