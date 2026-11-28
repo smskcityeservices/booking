@@ -338,7 +338,7 @@ function bootstrapApp() {
       if (orgLabel) {
         orgLabel.textContent = STATE.settings.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม';
       }
-
+      updateSystemLogos(STATE.settings.ORG_LOGO_URL);
       populateDropdowns();
       renderBookingLayoutCards();
       updateAuthUI();
@@ -494,8 +494,9 @@ function navigateTo(view) {
     mybookings: 'รายการจองของฉัน',
     stats: 'สถิติและค้นหารายการจอง',
     admin: 'จัดการระบบและอนุมัติการจอง',
-    kiosk: 'ระบบแสดงสถานะห้องประชุมหน้าห้อง (Kiosk)'
-  };
+    kiosk: 'ระบบแสดงสถานะห้องประชุมหน้าห้อง (Kiosk)',
+    manual: 'คู่มือการใช้งานระบบ'
+      };
   var pageTitle = document.getElementById('pageTitle');
   if (pageTitle) pageTitle.textContent = titles[view] || 'ระบบจองห้องประชุม';
 
@@ -2662,31 +2663,45 @@ function loadAdminSettings() {
   callGas('getAdminSettings', STATE.token)
     .then(function(res) {
       var s = res.data || {};
+
       function setSafeVal(id, val) {
         var el = document.getElementById(id);
-        if (el) el.value = val;
+        if (el) el.value = (val !== undefined && val !== null) ? val : '';
       }
 
-      setSafeVal('setOrgName', s.ORG_NAME || '');
+      // 1. ตั้งค่าพื้นฐานและเวลาทำการ
+      setSafeVal('setOrgName', s.ORG_NAME || 'เทศบาลเมืองสมุทรสงคราม');
       setSafeVal('setFrontendUrl', s.FRONTEND_URL || '');
       setSafeVal('setOpenHour', extractCleanTime(s.OPEN_HOUR, '07:00'));
       setSafeVal('setCloseHour', extractCleanTime(s.CLOSE_HOUR, '20:00'));
+
+      // 2. ตั้งค่าโลโก้เทศบาล / ตราสัญลักษณ์
+      setSafeVal('setLogoUrl', s.ORG_LOGO_URL || '');
+      if (typeof updateSystemLogos === 'function') {
+        updateSystemLogos(s.ORG_LOGO_URL || '');
+      }
+
+      // 3. ตั้งค่าจำนวนรายการจองถัดไปในหน้าจอ Kiosk
       setSafeVal('setKioskMaxUpcoming', s.KIOSK_MAX_UPCOMING || '5');
 
+      // 4. ตั้งค่าพารามิเตอร์ขั้นสูง (ถ้ามีช่องกรอกใน HTML)
       setSafeVal('setSpreadsheetId', s.SPREADSHEET_ID || '');
       setSafeVal('setCalendarId', s.CALENDAR_ID || '');
       setSafeVal('setDriveFolderId', s.DRIVE_FOLDER_ID || '');
       setSafeVal('setChatWebhookUrl', s.CHAT_WEBHOOK_URL || '');
       setSafeVal('setAdminNotifyEmail', s.ADMIN_NOTIFY_EMAIL || '');
 
+      // 5. ตั้งค่าเปิด/ปิดระบบ (Select Dropdown)
       setSelectValue('setRequireApproval', s.REQUIRE_APPROVAL, 'TRUE');
       setSelectValue('setCalendarSync', s.ENABLE_CALENDAR_SYNC, 'TRUE');
-      setSelectValue('setChatNotify', s.ENABLE_CHAT_NOTIFY, 'TRUE');
+      setSelectValue('setChatNotify', s.ENABLE_CHAT_NOTIFY, 'FALSE');
       setSelectValue('setRemind1D', s.REMINDER_1D, 'TRUE');
       setSelectValue('setRemind2H', s.REMINDER_2H, 'TRUE');
       setSelectValue('setRemind30M', s.REMINDER_30M, 'TRUE');
     })
-    .catch(function(err) { showToast(err.message, 'error'); });
+    .catch(function(err) {
+      showToast(err.message, 'error');
+    });
 }
 
 function setSelectValue(elementId, val, defaultVal) {
@@ -2707,15 +2722,22 @@ function submitAdminSettings(e) {
 
   var payload = {
     ORG_NAME: getSafeVal('setOrgName', 'เทศบาลเมืองสมุทรสงคราม'),
+    ORG_LOGO_URL: getSafeVal('setLogoUrl', ''),
     FRONTEND_URL: getSafeVal('setFrontendUrl', ''),
     OPEN_HOUR: getSafeVal('setOpenHour', '07:00'),
     CLOSE_HOUR: getSafeVal('setCloseHour', '20:00'),
+    
+    // ตั้งค่า Kiosk Max Upcoming
     KIOSK_MAX_UPCOMING: getSafeVal('setKioskMaxUpcoming', '5'),
+
+    // ค่าพารามิเตอร์ขั้นสูง
     SPREADSHEET_ID: getSafeVal('setSpreadsheetId', ''),
     CALENDAR_ID: getSafeVal('setCalendarId', ''),
     DRIVE_FOLDER_ID: getSafeVal('setDriveFolderId', ''),
     CHAT_WEBHOOK_URL: getSafeVal('setChatWebhookUrl', ''),
     ADMIN_NOTIFY_EMAIL: getSafeVal('setAdminNotifyEmail', ''),
+
+    // สถานะเปิด/ปิดฟังก์ชัน
     REQUIRE_APPROVAL: getSafeVal('setRequireApproval', 'TRUE'),
     ENABLE_CALENDAR_SYNC: getSafeVal('setCalendarSync', 'TRUE'),
     ENABLE_CHAT_NOTIFY: getSafeVal('setChatNotify', 'FALSE'),
@@ -2724,25 +2746,60 @@ function submitAdminSettings(e) {
     REMINDER_30M: getSafeVal('setRemind30M', 'TRUE')
   };
 
+  // แนบข้อมูลรูปภาพโลโก้กรณีอัปโหลดไฟล์ใหม่ (Base64)
+  if (typeof pendingLogoData !== 'undefined' && pendingLogoData) {
+    payload.logoBase64 = pendingLogoData.base64;
+    payload.logoFileName = pendingLogoData.fileName;
+    payload.logoMimeType = pendingLogoData.mimeType;
+  }
+
   callGas('saveAdminSettings', STATE.token, payload)
-    .then(function() {
-      STATE.settings = payload;
+    .then(function(res) {
+      var savedSettings = (res && res.data) ? res.data : payload;
+      STATE.settings = savedSettings;
+
+      var newLogoUrl = savedSettings.ORG_LOGO_URL || payload.ORG_LOGO_URL;
+      STATE.settings.ORG_LOGO_URL = newLogoUrl;
+
+      // อัปเดตรูปภาพโลโก้ตามจุดต่างๆ ของระบบทันที
+      if (typeof updateSystemLogos === 'function') {
+        updateSystemLogos(newLogoUrl);
+      }
+      if (typeof pendingLogoData !== 'undefined') {
+        pendingLogoData = null; // เคลียร์แคชไฟล์ที่อัปโหลด
+      }
+
+      // อัปเดตชื่อหน่วยงานบนแถบเมนูด้านข้าง
       var orgLabel = document.getElementById('orgNameLabel');
-      if (orgLabel) orgLabel.textContent = payload.ORG_NAME;
-      updateTimeSlotOptions();
+      if (orgLabel) {
+        orgLabel.textContent = payload.ORG_NAME;
+      }
+
+      // รีเฟรชช่วงเวลาทำการในฟอร์มจอง
+      if (typeof updateTimeSlotOptions === 'function') {
+        updateTimeSlotOptions();
+      }
 
       Swal.fire({
         icon: 'success',
         title: 'บันทึกสำเร็จ!',
-        text: 'การตั้งค่าระบบทั้งหมดถูกบันทึกลงฐานข้อมูลเรียบร้อยแล้ว',
+        text: 'การตั้งค่าระบบและโลโก้เทศบาลถูกบันทึกเรียบร้อยแล้ว',
         confirmButtonColor: '#0f4c81',
-        timer: 2000
+        timer: 2000,
+        timerProgressBar: true
       });
     })
     .catch(function(err) {
-      Swal.fire({ icon: 'error', title: 'บันทึกไม่สำเร็จ', text: err.message, confirmButtonColor: '#0f4c81' });
+      Swal.fire({
+        icon: 'error',
+        title: 'บันทึกไม่สำเร็จ',
+        text: err.message,
+        confirmButtonColor: '#0f4c81'
+      });
     })
-    .finally(function() { setLoading(false); });
+    .finally(function() {
+      setLoading(false);
+    });
 }
 
 function loadAdminBookings() {
@@ -3118,7 +3175,100 @@ function removeUser(email) {
     }
   });
 }
+/**
+ * อัปเดตและแสดงรูปภาพโลโก้ในจุดต่างๆ ของระบบ
+ */
+function updateSystemLogos(logoUrl) {
+  var hasLogo = Boolean(logoUrl && logoUrl.trim().indexOf('http') === 0);
+  var cleanUrl = hasLogo ? logoUrl.trim() : '';
 
+  // 1. Sidebar Brand
+  var sbImg = document.getElementById('sidebarLogoImg');
+  var sbIcon = document.getElementById('sidebarLogoIcon');
+  if (sbImg && sbIcon) {
+    if (hasLogo) {
+      sbImg.src = cleanUrl;
+      sbImg.style.display = 'inline-block';
+      sbIcon.style.display = 'none';
+    } else {
+      sbImg.style.display = 'none';
+      sbIcon.style.display = 'inline-block';
+    }
+  }
+
+  // 2. Kiosk Mode Header
+  var kImg = document.getElementById('kioskLogoImg');
+  if (kImg) {
+    if (hasLogo) {
+      kImg.src = cleanUrl;
+      kImg.style.display = 'block';
+    } else {
+      kImg.style.display = 'none';
+    }
+  }
+
+  // 3. Login Modal
+  var lImg = document.getElementById('loginLogoImg');
+  if (lImg) {
+    if (hasLogo) {
+      lImg.src = cleanUrl;
+      lImg.style.display = 'block';
+    } else {
+      lImg.style.display = 'none';
+    }
+  }
+
+  // 4. Setting Preview
+  var setPrev = document.getElementById('settingLogoPreview');
+  var setUrlInput = document.getElementById('setLogoUrl');
+  if (setPrev) {
+    if (hasLogo) {
+      setPrev.src = cleanUrl;
+      setPrev.style.display = 'block';
+    } else {
+      setPrev.style.display = 'none';
+    }
+  }
+  if (setUrlInput && !setUrlInput.value) {
+    setUrlInput.value = cleanUrl;
+  }
+}
+var pendingLogoData = null; // เก็บไฟล์ภาพที่เลือกไว้
+
+function handleLogoFileSelect(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var img = new Image();
+    img.onload = function() {
+      // ย่อภาพโลโก้ไม่ให้ใหญ่เกินไปเพื่อประหยัดขนาด (กว้างสุด 400px)
+      var maxW = 400;
+      var scale = img.width > maxW ? (maxW / img.width) : 1;
+      var canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      var compressed = canvas.toDataURL(file.type || 'image/png', 0.9);
+
+      pendingLogoData = {
+        base64: compressed,
+        fileName: file.name,
+        mimeType: file.type || 'image/png'
+      };
+
+      // แสดงพรีวิวทันที
+      var prev = document.getElementById('settingLogoPreview');
+      if (prev) {
+        prev.src = compressed;
+        prev.style.display = 'block';
+      }
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
 function loadAdminAudit() {
   callGas('getAuditLogs', STATE.token, 100)
     .then(function(res) {
