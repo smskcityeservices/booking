@@ -3205,7 +3205,10 @@ function updateSystemLogos(logoUrl) {
     setUrlInput.value = cleanUrl;
   }
 }
-var pendingLogoData = null; // เก็บไฟล์ภาพที่เลือกไว้
+/* ==========================================================================
+ * Logo Upload Handler (ฟังก์ชันจัดการการเลือกและย่อขนาดรูปภาพโลโก้)
+ * ======================================================================== */
+var pendingLogoData = null; // ตัวแปร Global เก็บข้อมูลไฟล์ภาพที่เลือกไว้
 
 function handleLogoFileSelect(e) {
   var file = e.target.files[0];
@@ -3215,22 +3218,24 @@ function handleLogoFileSelect(e) {
   reader.onload = function(ev) {
     var img = new Image();
     img.onload = function() {
-      // ย่อภาพโลโก้ไม่ให้ใหญ่เกินไปเพื่อประหยัดขนาด (กว้างสุด 400px)
+      // ปรับขนาดภาพโลโก้ให้เหมาะสม (กว้างสุด 400px) เพื่อประหยัดขนาด Payload
       var maxW = 400;
       var scale = img.width > maxW ? (maxW / img.width) : 1;
       var canvas = document.createElement('canvas');
       canvas.width = img.width * scale;
       canvas.height = img.height * scale;
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       var compressed = canvas.toDataURL(file.type || 'image/png', 0.9);
 
+      // เก็บลงในตัวแปรสำหรับส่งไป Backend
       pendingLogoData = {
         base64: compressed,
         fileName: file.name,
         mimeType: file.type || 'image/png'
       };
 
-      // แสดงพรีวิวทันที
+      // แสดงภาพพรีวิวในหน้าตั้งค่าทันที
       var prev = document.getElementById('settingLogoPreview');
       if (prev) {
         prev.src = compressed;
