@@ -2819,8 +2819,10 @@ function loadAdminSettings() {
       setSafeVal('setOpenHour', extractCleanTime(s.OPEN_HOUR, '07:00'));
       setSafeVal('setCloseHour', extractCleanTime(s.CLOSE_HOUR, '20:00'));
 
-      // 2. ตั้งค่าโลโก้เทศบาล / ตราสัญลักษณ์
+      // 🟢 2. เพิ่มบรรทัดนี้ เพื่อดึงลิงก์โลโก้มาแสดงในช่อง Input ตอนเปิดหน้าตั้งค่า
       setSafeVal('setLogoUrl', s.ORG_LOGO_URL || '');
+
+      // อัปเดตรูปพรีวิวโลโก้
       if (typeof updateSystemLogos === 'function') {
         updateSystemLogos(s.ORG_LOGO_URL || '');
       }
@@ -2828,14 +2830,7 @@ function loadAdminSettings() {
       // 3. ตั้งค่าจำนวนรายการจองถัดไปในหน้าจอ Kiosk
       setSafeVal('setKioskMaxUpcoming', s.KIOSK_MAX_UPCOMING || '5');
 
-      // 4. ตั้งค่าพารามิเตอร์ขั้นสูง (ถ้ามีช่องกรอกใน HTML)
-      setSafeVal('setSpreadsheetId', s.SPREADSHEET_ID || '');
-      setSafeVal('setCalendarId', s.CALENDAR_ID || '');
-      setSafeVal('setDriveFolderId', s.DRIVE_FOLDER_ID || '');
-      setSafeVal('setChatWebhookUrl', s.CHAT_WEBHOOK_URL || '');
-      setSafeVal('setAdminNotifyEmail', s.ADMIN_NOTIFY_EMAIL || '');
-
-      // 5. ตั้งค่าเปิด/ปิดระบบ (Select Dropdown)
+      // 4. ตั้งค่าเปิด/ปิดระบบ (Select Dropdown)
       setSelectValue('setRequireApproval', s.REQUIRE_APPROVAL, 'TRUE');
       setSelectValue('setCalendarSync', s.ENABLE_CALENDAR_SYNC, 'TRUE');
       setSelectValue('setChatNotify', s.ENABLE_CHAT_NOTIFY, 'FALSE');
